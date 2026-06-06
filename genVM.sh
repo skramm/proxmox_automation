@@ -8,11 +8,21 @@
 # désactive l'interprétation de '!' dans une chaine
 set +H
 
-
+if [ "$1" = "" ]
+then
+	echo "Erreur, donner votre id 5+3 en argument"
+	exit 1
+fi
+PVUSER=$1
 
 # read token details
 source ../token_20260110
 
+ISOK=$(zenity --question --text "L'inventaire des machines est-il à jour?")
+if [ $? != 0 ]; then
+	./exportVM.sh PVUSER
+fi
+echo "ISOK=$ISOK"
 
 NODE=$(zenity --list --text="Choisissez le noeud" --column="nodes" anvers gand bruxelles)
 if [ $? != 0 ]; then
@@ -22,10 +32,24 @@ fi
 echo "NODE=$NODE"
 
 # Afficher la liste des templates dispos sur ce noeud
+if ! [ -f template_$NODE.csv ]
+then
+	echo "Aucun template disponible sur ce noeud"
+	exit 1
+fi
 
-# TODO faire une requete sur le noeud pour lister les machines et en extraire celles qui sont des template
+# construction chaine contenant les noms des templates
+TEMPLATES=
+IFS=";";while read -a ARR
+do
+	TEMPLATES=$TEMPLATES" ${ARR[0]}"
+done < template_$NODE.csv
 
-TEMPLATE=$(zenity --list --text="Quel template à utiliser?" --column="templates" $TEMPLATES)
+TEMPL2=(${TEMPLATES:1})
+echo "t=$TEMPLATES t2=$TEMPL2"
+
+TEMPLATE=$(zenity --list --text="Quel template à utiliser?" --column="Available xtemplates" ${TEMPL2[@]})
+#TEMPLATE=$(zenity --list --text="Quel template à utiliser?" --column="templates" R604S2 R604CL R207CL R604S1)
 if [ $? != 0 ]; then
 	echo "Interruption"; exit 1
 fi
