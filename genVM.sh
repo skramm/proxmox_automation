@@ -43,7 +43,7 @@ fi
 echo "NB=$NB"
 
 
-MOD=$(zenity --entry --text "Donner le nom du module (RXXX, SAETTT)")
+MOD=$(zenity --entry --text "Donner le nom du module (RXXX, SAETTT)\n(servira pour le nom des VM)")
 if [ $? != 0 ]; then
 	echo "Interruption"; exit 1
 fi
@@ -57,7 +57,7 @@ fi
 echo "TAGS=$TAGS"
 
 
-START=$(zenity --question --text "Ok pour créer $NB VM, nommées ${MOD}_1 à ${MOD}_NB, basée sur le template $TEMPLATE et ayant les tags $TAGS?")
+START=$(zenity --question --text "Ok pour créer $NB VM, nommées ${MOD}_1 à ${MOD}_NB, basées sur le template $TEMPLATE et ayant les tags $TAGS?")
 if [ $? != 0 ]; then
 	echo "Interruption"; exit 1
 fi
