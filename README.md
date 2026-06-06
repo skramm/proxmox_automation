@@ -1,7 +1,8 @@
 # proxmox_automation
 Scripts to automate handling sets of identical VMs
 
-[!CAUTION]
+>[!CAUTION]
+
 WIP !!
 
 Objectif: avoir des scripts permettant de lister, créer/supprimer, démarrer/éteindre (?)
