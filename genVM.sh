@@ -39,17 +39,20 @@ then
 fi
 
 # construction chaine contenant les noms des templates
-TEMPLATES=
+
+declare -a TEMPLATES
 IFS=";";while read -a ARR
 do
-	TEMPLATES=$TEMPLATES" ${ARR[0]}"
+	echo "TEMPLATES=$TEMPLATES ARR[0]=${ARR[0]}"
+	x=${ARR[0]}
+	TEMPLATES+=($x)
 done < template_$NODE.csv
 
 TEMPL2=(${TEMPLATES:1})
 echo "t=$TEMPLATES t2=$TEMPL2"
 
-TEMPLATE=$(zenity --list --text="Quel template à utiliser?" --column="Available xtemplates" ${TEMPL2[@]})
-#TEMPLATE=$(zenity --list --text="Quel template à utiliser?" --column="templates" R604S2 R604CL R207CL R604S1)
+#TEMPLATE=$(zenity --list --text="Quel template à utiliser?" --column="Available xtemplates" ${TEMPL2[@]})
+TEMPLATE=$(zenity --list --text="Quel template à utiliser?" --column="templates" $TEMPLATES)
 if [ $? != 0 ]; then
 	echo "Interruption"; exit 1
 fi
