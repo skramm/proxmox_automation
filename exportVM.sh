@@ -7,7 +7,7 @@ set +x
 # désactive l'interprétation de '!' dans une chaine
 set +H
 
-# arg
+# argument id 5+3
 
 if [ "$1" = "" ]
 then
@@ -18,16 +18,20 @@ PVUSER=$1
 
 if [ -f out.csv ]; then rm out.csv;fi
 
+# on stocke les logs la bas
+mkdir -p /tmp/proxmox
+
+
 TODAY=$(date '+%Y%m%d_%H%M%S')
 out=out.csv
-CURLLOG=curl_$TODAY.log
+CURLLOG=/tmp/proxmox/curl_$TODAY.log
 
 #---------------------------------------------------------------------------
 function process()
 {
 #	echo "process $1"
 	curl -k --silent \
-		-H "Authorization: PVEAPIToken=$PVUSER@UR!${TOK_NAME}=${TOK_VALUE}" \
+		-H "Authorization: PVEAPIToken=$PVUSER@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
 		https://anvers.univ-rouen.fr:8006/api2/json/nodes/$1/qemu | jq -r '.data[]' >out_$1.json 2>>$CURLLOG
 	err=$?
 	if ! [ $err = 0 ]
@@ -52,7 +56,7 @@ function process()
 		if [ ${ARR[3]} = 1 ]
 		then
 			NBT=$((NBT+1))
-			echo "${ARR[1]};${ARR[2]}" >> template_$1.csv
+			echo "${ARR[1]};${ARR[2]};${ARR[0]}" >> template_$1.csv
 		fi
  	done < out_$1.csv
  	echo " -node '$1': $(wc -l <out_$1.csv) machines, dont $NBT template(s)"
@@ -73,7 +77,7 @@ fi
 echo "Test de la réponse de l'API"
 
 response=$(curl -s -k \
-  -H "Authorization: PVEAPIToken=$PVUSER@UR!${TOK_NAME}=${TOK_VALUE}" \
+  -H "Authorization: PVEAPIToken=$PVUSER@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
   https://anvers.univ-rouen.fr:8006/api2/json/version) 1>>$CURLLOG
 
 if [ $? -eq 0 ] && [ -n "$response" ]; then
@@ -86,7 +90,7 @@ fi
 # liste des nodes 
 echo "Récupération liste des nodes..."
 curl --silent -k \
-	-H "Authorization: PVEAPIToken=$PVUSER@UR!${TOK_NAME}=${TOK_VALUE}" \
+	-H "Authorization: PVEAPIToken=$PVUSER@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
 	https://anvers.univ-rouen.fr:8006/api2/json/nodes|jq | jq -r '.data[] | .node' >nodes.csv 2>>$CURLLOG
 
 echo "Nodes accessibles: $(wc -l < nodes.csv)"

@@ -48,10 +48,9 @@ do
 	TEMPLATES+=($x)
 done < template_$NODE.csv
 
-#TEMPL2=(${TEMPLATES:1})
+
 echo "t=${TEMPLATES[@]}"
 
-#TEMPLATE=$(zenity --list --text="Quel template à utiliser?" --column="Available xtemplates" ${TEMPL2[@]})
 TEMPLATE=$(zenity --list --text="Quel template à utiliser?" --column="templates" ${TEMPLATES[@]})
 if [ $? != 0 ]; then
 	echo "Interruption"; exit 1
@@ -59,7 +58,19 @@ fi
 echo "TEMPLATE=$TEMPLATE"
 
 
-NB=$(zenity --scale --text "Combien de VM" --step=1 \
+# récupération du vmid du template
+IFS=";";while read -a ARR
+do
+	if [ ${ARR[0]} = $TEMPLATE ]
+	then
+		VMID=${ARR[2]}
+	fi 
+done < template_$NODE.csv
+
+echo "VMID=$VMID"
+
+
+NB=$(zenity --scale --text "Combien de VM?" --step=1 \
 	--value=1 \
 	--min-value=1 \
 	--max-value=30)
@@ -91,14 +102,17 @@ if [ $? != 0 ]; then
 fi
 echo "START=$START"
 
-exit
 
-for a in 
+#-------------------------
+# TODO: PAS DE GENERATION AUTOMATIQUE D'ID UNIQUE !!! COMMENT FAIRE?
+#-------------------------
+
+set -x
+for i in $(seq 1 $NB)
 do
-
-curl -k \
-	-H "Authorization: PVEAPIToken=${USER}@UR!${TOK_NAME}=${TOK_VALUE}" \
-	https://anvers.univ-rouen.fr:8006/api2/json/
+curl --silent -k \
+	-H "Authorization: PVEAPIToken=${USER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
+	https://anvers.univ-rouen.fr:8006/api2/json/nodes/$NODE/qemu/$VMID/clone?node=$NODE&vmid=$VMID&newid=XXX&name=${MOD}_$i
 
 done
 
