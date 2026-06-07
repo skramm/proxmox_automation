@@ -15,7 +15,7 @@ then
 fi
 PVUSER=$1
 
-YEARDAY=$(date '+%y%j%H%m')
+YEARDAY=$(date '+%y%j')
 #echo $YEARDAY
 #exit
 
@@ -95,6 +95,18 @@ if [ $? != 0 ]; then
 fi
 echo "TAGS=$TAGS"
 
+ID=$(zenity --entry --text "Donner l'identifiant commun à ce set de VM, entre 00 et 99\n(ne doit pas déja exister)")
+if [ $? != 0 ]; then
+	echo "Interruption"; exit 1
+fi
+echo "ID=$ID"
+
+if ! [ 2 = ${#ID} ]
+then
+	echo "Erreur, l'identifiant doit être entre 00 et 99"
+	exit 1
+fi
+
 
 START=$(zenity --question --text \
 	"Ok pour créer $NB VM, nommées ${MOD}-1 à ${MOD}-${NB}, basées sur le template $TEMPLATE et ayant les tags '$TAGS'?")
@@ -109,15 +121,18 @@ echo "START=$START"
 set -x
 for i in $(seq 1 $NB)
 do
-echo "CREATION CLONE i=$i"
+	NUM=$i
+	if [ 1 = ${#i} ]; then NUM=0$i;fi
+	echo "CREATION CLONE i=$NUM"
+	
 #curl --silent -k \
-response=$(curl -k \
-	-H "Authorization: PVEAPIToken=${USER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
-	"https://anvers.univ-rouen.fr:8006/api2/json/nodes/$NODE/qemu/$VMID/clone?node=$NODE&vmid=$VMID&newid=$YEARDAY&name=${MOD}_$i")
-err=$?
-echo "response=$response err=$err"
+	response=$(curl -k \
+		-H "Authorization: PVEAPIToken=${USER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
+		"https://anvers.univ-rouen.fr:8006/api2/json/nodes/$NODE/qemu/$VMID/clone?node=$NODE&vmid=$VMID&newid=${YEARDAY}${ID}${NUM}&name=${MOD}_$i")
+	err=$?
+	echo "response=$response err=$err"
 
-echo "Ajout des tags"
+	echo "Ajout des tags"
 
 done
 

@@ -1,15 +1,13 @@
 # proxmox_automation
-Scripts to automate handling sets of identical VMs
 
+Scripts to automate handling sets of identical VMs
+audience: at present, local team
 
 > [!CAUTION]
 > **Read before you run anything.**
 
-WIP !!
+This is designed for a local installation of a Proxmox instance
 
-Objectif: avoir des scripts permettant de lister, créer/supprimer, démarrer/éteindre (?)
-un ensemble de VM pour des TPs
-
-Note: inspiré par la présentation de ?? à l'ACD St Malo, juin 2026
+[doc en français](readme_fr.md)
 
 
