@@ -15,6 +15,10 @@ then
 fi
 PVUSER=$1
 
+YEARDAY=$(date '+%y%j%H%m')
+#echo $YEARDAY
+#exit
+
 # read token details
 source ../token_20260110
 
@@ -70,10 +74,7 @@ done < template_$NODE.csv
 echo "VMID=$VMID"
 
 
-NB=$(zenity --scale --text "Combien de VM?" --step=1 \
-	--value=1 \
-	--min-value=1 \
-	--max-value=30)
+NB=$(zenity --entry --text "Combien de VM?")
 if [ $? != 0 ]; then
 	echo "Interruption"; exit 1
 fi
@@ -104,15 +105,19 @@ echo "START=$START"
 
 
 #-------------------------
-# TODO: PAS DE GENERATION AUTOMATIQUE D'ID UNIQUE !!! COMMENT FAIRE?
-#-------------------------
 
 set -x
 for i in $(seq 1 $NB)
 do
-curl --silent -k \
+echo "CREATION CLONE i=$i"
+#curl --silent -k \
+response=$(curl -k \
 	-H "Authorization: PVEAPIToken=${USER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
-	https://anvers.univ-rouen.fr:8006/api2/json/nodes/$NODE/qemu/$VMID/clone?node=$NODE&vmid=$VMID&newid=XXX&name=${MOD}_$i
+	"https://anvers.univ-rouen.fr:8006/api2/json/nodes/$NODE/qemu/$VMID/clone?node=$NODE&vmid=$VMID&newid=$YEARDAY&name=${MOD}_$i")
+err=$?
+echo "response=$response err=$err"
+
+echo "Ajout des tags"
 
 done
 
