@@ -48,11 +48,11 @@ do
 	TEMPLATES+=($x)
 done < template_$NODE.csv
 
-TEMPL2=(${TEMPLATES:1})
-echo "t=$TEMPLATES t2=$TEMPL2"
+#TEMPL2=(${TEMPLATES:1})
+echo "t=${TEMPLATES[@]}"
 
 #TEMPLATE=$(zenity --list --text="Quel template à utiliser?" --column="Available xtemplates" ${TEMPL2[@]})
-TEMPLATE=$(zenity --list --text="Quel template à utiliser?" --column="templates" $TEMPLATES)
+TEMPLATE=$(zenity --list --text="Quel template à utiliser?" --column="templates" ${TEMPLATES[@]})
 if [ $? != 0 ]; then
 	echo "Interruption"; exit 1
 fi
@@ -84,7 +84,8 @@ fi
 echo "TAGS=$TAGS"
 
 
-START=$(zenity --question --text "Ok pour créer $NB VM, nommées ${MOD}_1 à ${MOD}_NB, basées sur le template $TEMPLATE et ayant les tags $TAGS?")
+START=$(zenity --question --text \
+	"Ok pour créer $NB VM, nommées ${MOD}-1 à ${MOD}-${NB}, basées sur le template $TEMPLATE et ayant les tags '$TAGS'?")
 if [ $? != 0 ]; then
 	echo "Interruption"; exit 1
 fi
