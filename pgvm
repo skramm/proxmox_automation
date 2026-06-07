@@ -13,6 +13,10 @@ then
 fi
 PVUSER=$1
 
+TODAY=$(date '+%Y%m%d_%H%M%S')
+CURLLOG=/tmp/proxmox/curl_$TODAY.log
+
+
 # read token details
 
 if ! [ -f $TOKEN_FILE ];
@@ -22,6 +26,30 @@ then
 fi
 source $TOKEN_FILE
 
+export PVUSER
+export TOK_VALUE
+export TOK_NAME
+export REALM
+export CURLLOG
+
+# on stocke les logs de curl la bas
+mkdir -p /tmp/proxmox
+
+
+# test de la réponse de l'API
+
+echo "Test de la réponse de l'API"
+
+response=$(curl --silent -k \
+  -H "Authorization: PVEAPIToken=$PVUSER@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
+  https://anvers.univ-rouen.fr:8006/api2/json/version) 1>>$CURLLOG
+
+if [ $? -eq 0 ] && [ -n "$response" ]; then
+    echo "API disponible"
+else
+    echo "API indisponible, réponse='$response'"
+	exit 1
+fi
 
 
 items=("Liste VM" "Création VMs" "Suppression VMs")
@@ -38,11 +66,11 @@ echo "item=$item"
 
 case "$item" in
 	"${items[0]}") ./pgvm_list;;
-	"${items[1]}") echo "Selected $item, item #2";;
+	"${items[1]}") ./pgvm_create;;
 	"${items[2]}") echo "Selected $item, item #3";;
 	*) echo "Ooops! Invalid option.";;
 esac
 
-
+echo "fini!"
 
 

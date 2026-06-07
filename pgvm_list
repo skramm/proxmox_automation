@@ -7,19 +7,19 @@ set +x
 # désactive l'interprétation de '!' dans une chaine
 set +H
 
+#echo PVUSER=$PVUSER
+
 # argument id 5+3
 
-if [ "$1" = "" ]
-then
-	echo "Erreur, donner votre id 5+3 en argument"
-	exit 1
-fi
-PVUSER=$1
+#if [ "$1" = "" ]
+#then
+#	echo "Erreur, donner votre id 5+3 en argument"
+#	exit 1
+#fi
+#PVUSER=$1
 
 if [ -f out.csv ]; then rm out.csv;fi
 
-# on stocke les logs la bas
-mkdir -p /tmp/proxmox
 
 
 TODAY=$(date '+%Y%m%d_%H%M%S')
@@ -75,18 +75,6 @@ source ../token_20260110
 #	exit 1
 #fi
 
-echo "Test de la réponse de l'API"
-
-response=$(curl -s -k \
-  -H "Authorization: PVEAPIToken=$PVUSER@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
-  https://anvers.univ-rouen.fr:8006/api2/json/version) 1>>$CURLLOG
-
-if [ $? -eq 0 ] && [ -n "$response" ]; then
-    echo "API disponible"
-else
-    echo "API indisponible, réponse='$response'"
-	exit 1
-fi
 
 # liste des nodes 
 echo "Récupération liste des nodes..."
