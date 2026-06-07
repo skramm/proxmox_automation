@@ -1,0 +1,48 @@
+#!/bin/bash
+
+# name: pgvm ("Proxmox Gestion VM")
+# S. Kramm, URN, 2026
+
+TOKEN_FILE=../token_20260110
+# argument id 5+3
+
+if [ "$1" = "" ]
+then
+	echo "Erreur, donner votre id 5+3 en argument"
+	exit 1
+fi
+PVUSER=$1
+
+# read token details
+
+if ! [ -f $TOKEN_FILE ];
+then
+	echo "Erreur, fichier $TOKEN_FILE introuvable!"
+	exit 1
+fi
+source $TOKEN_FILE
+
+
+
+items=("Liste VM" "Création VMs" "Suppression VMs")
+
+item=$(zenity --list \
+	--title="Menu principal" \
+	--text="Choix" \
+	--column="Options" "${items[@]}")
+if [ $? != 0 ]; then
+	echo "Interruption"; exit 1
+fi
+
+echo "item=$item"
+
+case "$item" in
+	"${items[0]}") ./pgvm_list;;
+	"${items[1]}") echo "Selected $item, item #2";;
+	"${items[2]}") echo "Selected $item, item #3";;
+	*) echo "Ooops! Invalid option.";;
+esac
+
+
+
+

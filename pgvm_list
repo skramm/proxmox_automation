@@ -67,12 +67,13 @@ function process()
 source ../token_20260110
 
 # test du tunnel VPN
-ip a | grep tun 1>/dev/null
-if [ $? != 0 ]
-then
-	echo "Tunnel VPN absent, arret"
-	exit 1
-fi
+# COMMENTé 20260607: si connecté sur le réseau URN, pas besoin de VPN
+#ip a | grep tun 1>/dev/null
+#if [ $? != 0 ]
+#then
+#	echo "Tunnel VPN absent, arret"
+#	exit 1
+#fi
 
 echo "Test de la réponse de l'API"
 

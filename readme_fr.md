@@ -1,4 +1,4 @@
-# Documenation des scripts
+# Documentation du projet
 
 Auteur: S. Kramm, IUT Rouen
 Date: 2026/06
