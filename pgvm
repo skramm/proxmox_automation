@@ -67,7 +67,7 @@ echo "item=$item"
 case "$item" in
 	"${items[0]}") ./pgvm_list;;
 	"${items[1]}") ./pgvm_create;;
-	"${items[2]}") echo "Selected $item, item #3";;
+	"${items[2]}") ./pgvm_delete;;
 	*) echo "Ooops! Invalid option.";;
 esac
 

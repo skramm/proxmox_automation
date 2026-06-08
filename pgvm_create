@@ -1,26 +1,19 @@
+# nom: pgvm_create
+# ce script doit être appelé depuis le script maitre pgvm
 
 # Script de gestion d'un ensemble de machines
 
 # !!!!!!!!!!!! WIP !!!!!!!!!!!!
 
-# arg
 
 # désactive l'interprétation de '!' dans une chaine
 set +H
 
-if [ "$1" = "" ]
-then
-	echo "Erreur, donner votre id 5+3 en argument"
-	exit 1
-fi
-PVUSER=$1
 
 YEARDAY=$(date '+%y%j')
 #echo $YEARDAY
 #exit
 
-# read token details
-source ../token_20260110
 
 ISOK=$(zenity --question --text "L'inventaire des machines est-il à jour?")
 if [ $? != 0 ]; then
@@ -123,7 +116,7 @@ for i in $(seq 1 $NB)
 do
 	NUM=$i
 	if [ 1 = ${#i} ]; then NUM=0$i;fi
-	echo "CREATION CLONE i=$NUM"
+	echo "CREATION CLONE i=$NUM, nom=${MOD}_$i, id=${YEARDAY}${ID}${NUM}"
 	
 #curl --silent -k \
 	response=$(curl -k \
@@ -131,8 +124,19 @@ do
 		"https://anvers.univ-rouen.fr:8006/api2/json/nodes/$NODE/qemu/$VMID/clone?node=$NODE&vmid=$VMID&newid=${YEARDAY}${ID}${NUM}&name=${MOD}_$i")
 	err=$?
 	echo "response=$response err=$err"
+	if ! [ $err = 0 ]; then exit 1; fi
 
 	echo "Ajout des tags"
+# ref: https://pve.proxmox.com/pve-docs/api-viewer/#/nodes/{node}/qemu/{vmid}/config
+
+#curl --silent -k \
+	response=$(curl -k \
+		-X POST \
+		-H "Authorization: PVEAPIToken=${USER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
+		"https://anvers.univ-rouen.fr:8006/api2/json/nodes/$NODE/qemu/$VMID/config?node=$NODE&vmid=$VMID&tags=$TAGS")
+	err=$?
+	echo "response=$response err=$err"
+	if ! [ $err = 0 ]; then exit 1; fi
 
 done
 

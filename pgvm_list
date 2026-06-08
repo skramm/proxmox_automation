@@ -1,5 +1,7 @@
 
+# nom: pgvm_list
 # Génération d'une liste de VM
+# ce script doit être appelé depuis le script maitre pgvm
 
 # -x pour debug
 set +x

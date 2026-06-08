@@ -1,0 +1,59 @@
+
+# nom: pgvm_delete
+# ce script doit être appelé depuis le script maitre pgvm
+
+# !!!!!!!!!!!! WIP !!!!!!!!!!!!
+
+
+
+# désactive l'interprétation de '!' dans une chaine
+set +H
+
+
+# récupération de tous les tags existants
+
+
+
+
+
+
+
+
+TAGDEL=$(zenity --list --text="Quel machines ayant le tag ci-dessous souhaitez-vous détruire?" --column="tags" ${ALLTAGS[@]})
+if [ $? != 0 ]; then
+	echo "Interruption"; exit 1
+fi
+
+echo "TAGDEL=$TAGDEL"
+
+START=$(zenity --question --text \
+	"Ok pour effacer toutes les VM associées au tag $TAGDEL?")
+
+if [ $? != 0 ]; then
+	echo "Interruption"; exit 1
+fi
+echo "START=$START"
+
+
+#-------------------------
+# Suppression des machines
+
+
+set -x
+for i in $(seq 1 $NB)
+do
+	NUM=$i
+	if [ 1 = ${#i} ]; then NUM=0$i;fi
+	echo "CREATION CLONE i=$NUM"
+	
+#curl --silent -k \
+	response=$(curl -k \
+		-H "Authorization: PVEAPIToken=${USER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
+		"https://anvers.univ-rouen.fr:8006/api2/json/nodes/$NODE/qemu/$VMID/clone?node=$NODE&vmid=$VMID&newid=${YEARDAY}${ID}${NUM}&name=${MOD}_$i")
+	err=$?
+	echo "response=$response err=$err"
+
+	echo "Ajout des tags"
+
+done
+
