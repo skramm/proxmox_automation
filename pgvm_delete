@@ -11,16 +11,22 @@
 set +H
 
 
-# récupération de tous les tags existants
+declare -a TAGARR
+
+if ! [ -f tags.csv ]
+then
+	echo "Erreur, fichier 'tags.csv' inaccessible"
+	exit 1
+fi
+
+IFS=";";while read TAG
+do
+	TAGARR+=($TAG)
+done <tags.csv
+echo "TAGARR=${TAGARR[@]}"	
 
 
-
-
-
-
-
-
-TAGDEL=$(zenity --list --text="Quel machines ayant le tag ci-dessous souhaitez-vous détruire?" --column="tags" ${ALLTAGS[@]})
+TAGDEL=$(zenity --list --text="Quel machines ayant le tag ci-dessous souhaitez-vous détruire?" --column="tags" ${TAGARR[@]})
 if [ $? != 0 ]; then
 	echo "Interruption"; exit 1
 fi
@@ -34,7 +40,7 @@ if [ $? != 0 ]; then
 	echo "Interruption"; exit 1
 fi
 echo "START=$START"
-
+exit1
 
 #-------------------------
 # Suppression des machines

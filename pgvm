@@ -3,22 +3,16 @@
 # name: pgvm ("Proxmox Gestion VM")
 # S. Kramm, URN, 2026
 
-TOKEN_FILE=../token_20260110
-# argument id 5+3
+#TOKEN_FILE=../token_20260110
 
 if [ "$1" = "" ]
 then
-	echo "Erreur, donner votre id 5+3 en argument"
+	echo "Erreur, donner en argument le fichier de credentials"
 	exit 1
 fi
-PVUSER=$1
+TOKEN_FILE=$1
 
-TODAY=$(date '+%Y%m%d_%H%M%S')
-CURLLOG=/tmp/proxmox/curl_$TODAY.log
-
-
-# read token details
-
+# vérification de l'accès au fichier
 if ! [ -f $TOKEN_FILE ];
 then
 	echo "Erreur, fichier $TOKEN_FILE introuvable!"
@@ -32,12 +26,22 @@ export TOK_NAME
 export REALM
 export CURLLOG
 
+
+# vérification que zenity est installé
+which zenity >/dev/null
+if [ $? = 1 ]
+then
+	echo "Erreur: zenity pas disponible"
+	exit 1
+fi
+
+TODAY=$(date '+%Y%m%d_%H%M%S')
+CURLLOG=/tmp/proxmox/curl_$TODAY.log
+
 # on stocke les logs de curl la bas
 mkdir -p /tmp/proxmox
 
-
 # test de la réponse de l'API
-
 echo "Test de la réponse de l'API"
 
 response=$(curl --silent -k \
@@ -54,10 +58,11 @@ fi
 
 items=("Liste VM" "Création VMs" "Suppression VMs")
 
-item=$(zenity --list \
+while item=$(zenity --list \
 	--title="Menu principal" \
 	--text="Choix" \
 	--column="Options" "${items[@]}")
+do
 if [ $? != 0 ]; then
 	echo "Interruption"; exit 1
 fi
@@ -70,6 +75,7 @@ case "$item" in
 	"${items[2]}") ./pgvm_delete;;
 	*) echo "Ooops! Invalid option.";;
 esac
+done
 
 echo "fini!"
 

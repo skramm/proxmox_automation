@@ -21,12 +21,12 @@ set +H
 #fi
 #PVUSER=$1
 
-if [ -f out.csv ]; then rm out.csv;fi
+OUT=out_all.csv
 
+if [ -f $OUT ]; then rm $OUT; fi
 
 
 TODAY=$(date '+%Y%m%d_%H%M%S')
-out=out.csv
 CURLLOG=/tmp/proxmox/curl_$TODAY.log
 
 #---------------------------------------------------------------------------
@@ -47,7 +47,7 @@ function process()
 # Ajout nom node en tete du csv
 	IFS=";";while read line;
 	do
-		echo "$1;${line}" >> out.csv
+		echo "$1;${line}" >> $OUT
  	done < out_$1.csv
 
 # extraction des template de chaque node
@@ -65,17 +65,12 @@ function process()
 	echo " -node '$1': $(wc -l <out_$1.csv) machines, dont $NBT template(s)"
 
 # Génération d'un CSV contenant tous les tags (format à définir?)
-
-# ref: https://pve.proxmox.com/pve-docs/api-viewer/#/nodes/{node}/qemu/{vmid}/config
-#	response=$(curl -k \
-#		--silent
-#		-X GET \
-#		-H "Authorization: PVEAPIToken=${USER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
-#		"https://anvers.univ-rouen.fr:8006/api2/json/nodes/$NODE/qemu/$VMID/config?node=$NODE&vmid=$VMID&tags=$TAGS")
-#	err=$?
-#	echo "response=$response err=$err"
-#	if ! [ $err = 0 ]; then exit 1; fi
-
+	IFS=";";while read -a ARR
+	do
+		echo "${ARR[3]}">>tags2.csv
+	done <$OUT
+	sort tags2.csv >tags1.csv
+	uniq tags1.csv >tags.csv
 }
 #---------------------------------------------------------------------------
 
@@ -88,13 +83,15 @@ curl --silent -k \
 
 echo "Nodes accessibles: $(wc -l < nodes.csv)"
 
+if [ -f tags2.csv ]; then rm tags2.csv; fi
+
 while read -r nodename
 do
 #	echo "process node $nodename"
 	process $nodename
 done < nodes.csv
 
-
+exit 0
 
 
 
