@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # nom: pgvm_create
 # ce script doit être appelé depuis le script maitre pgvm
 
@@ -110,27 +112,29 @@ echo "START=$START"
 
 
 #-------------------------
-
+# Creation des clones
 set -x
 for i in $(seq 1 $NB)
 do
 	NUM=$i
 	if [ 1 = ${#i} ]; then NUM=0$i;fi
 	echo "CREATION CLONE i=$NUM, nom=${MOD}_$i, id=${YEARDAY}${ID}${NUM}"
-	
-#curl --silent -k \
+
+# ref: https://pve.proxmox.com/pve-docs/api-viewer/#/nodes/{node}/qemu/{vmid}/clone
 	response=$(curl -k \
+		--silent
+		-X POST
 		-H "Authorization: PVEAPIToken=${USER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
 		"https://anvers.univ-rouen.fr:8006/api2/json/nodes/$NODE/qemu/$VMID/clone?node=$NODE&vmid=$VMID&newid=${YEARDAY}${ID}${NUM}&name=${MOD}_$i")
 	err=$?
 	echo "response=$response err=$err"
 	if ! [ $err = 0 ]; then exit 1; fi
 
+
 	echo "Ajout des tags"
 # ref: https://pve.proxmox.com/pve-docs/api-viewer/#/nodes/{node}/qemu/{vmid}/config
-
-#curl --silent -k \
 	response=$(curl -k \
+		--silent
 		-X POST \
 		-H "Authorization: PVEAPIToken=${USER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
 		"https://anvers.univ-rouen.fr:8006/api2/json/nodes/$NODE/qemu/$VMID/config?node=$NODE&vmid=$VMID&tags=$TAGS")

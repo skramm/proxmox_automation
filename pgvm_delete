@@ -1,3 +1,4 @@
+#!/bin/bash
 
 # nom: pgvm_delete
 # ce script doit être appelé depuis le script maitre pgvm
