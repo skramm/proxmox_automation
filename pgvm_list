@@ -50,6 +50,9 @@ function process()
 		echo "$1;${line}" >> $OUT
  	done < out_$1.csv
 
+# replace null by 0
+	sed -i -e 's/;null/;0/g' out_all.csv
+
 # extraction des template de chaque node
 	NBT=0
 	if [ -f template_$1.csv ]; then rm template_$1.csv; fi
@@ -83,7 +86,6 @@ function process()
 }
 #---------------------------------------------------------------------------
 
-
 # liste des nodes 
 echo "-Récupération liste des nodes..."
 curl --silent -k \
@@ -107,12 +109,12 @@ done < nodes.csv
 echo "-Nb templates: $(wc -l<template_all.csv)"
 echo -e "\n Available templates:"
 printf "| %10s | %13s | %15s | %7s |\n" Node Name Tags VMid
-echo "|------------|---------------|-----------------|---------|"
+echo "|------------+---------------+-----------------+---------|"
 IFS=";";while read -a ARR
 do
 	printf "| %10s | %13s | %15s | %7s |\n" ${ARR[0]} ${ARR[1]} ${ARR[2]} ${ARR[3]}
 done < template_all.csv
-echo "|------------|---------------|-----------------|---------|"
+echo "|------------+---------------+-----------------+---------|"
 
 
 echo -e "\n-Nb occurences des tags"
