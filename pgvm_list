@@ -60,7 +60,16 @@ function process()
 		then
 			NBT=$((NBT+1))
 			echo "${ARR[1]};${ARR[2]};${ARR[0]}" >> template_$1.csv
+			echo "$1;${ARR[1]};${ARR[2]};${ARR[0]}" >> template_all.csv
 		fi
+
+# comptage de tags
+		if ! [ "${ARR[2]}" = "" ]
+		then
+			tag=${ARR[2]}
+			((TAGARR[$tag]++))
+		fi
+
 	done < out_$1.csv
 	echo " -node '$1': $(wc -l <out_$1.csv) machines, dont $NBT template(s)"
 
@@ -76,20 +85,41 @@ function process()
 
 
 # liste des nodes 
-echo "Récupération liste des nodes..."
+echo "-Récupération liste des nodes..."
 curl --silent -k \
 	-H "Authorization: PVEAPIToken=$PVUSER@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
 	https://anvers.univ-rouen.fr:8006/api2/json/nodes|jq | jq -r '.data[] | .node' >nodes.csv 2>>$CURLLOG
 
-echo "Nodes accessibles: $(wc -l < nodes.csv)"
+echo "-Nodes accessibles: $(wc -l < nodes.csv)"
 
 if [ -f tags2.csv ]; then rm tags2.csv; fi
+if [ -f template_all.csv ]; then rm template_all.csv; fi
+
+# associative array used to count tags
+declare -A TAGARR
 
 while read -r nodename
 do
 #	echo "process node $nodename"
 	process $nodename
 done < nodes.csv
+
+echo "-Nb templates: $(wc -l<template_all.csv)"
+echo -e "\n Available templates:"
+printf "| %10s | %13s | %15s | %7s |\n" Node Name Tags VMid
+echo "|------------|---------------|-----------------|---------|"
+IFS=";";while read -a ARR
+do
+	printf "| %10s | %13s | %15s | %7s |\n" ${ARR[0]} ${ARR[1]} ${ARR[2]} ${ARR[3]}
+done < template_all.csv
+echo "|------------|---------------|-----------------|---------|"
+
+
+echo -e "\n-Nb occurences des tags"
+for i in "${!TAGARR[@]}"
+do
+	echo "${i}=${TAGARR[$i]}"
+done
 
 exit 0
 

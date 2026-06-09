@@ -42,21 +42,11 @@ CURLLOG=/tmp/proxmox/curl_$TODAY.log
 mkdir -p /tmp/proxmox
 
 # test de la réponse de l'API
-echo "Test de la réponse de l'API"
-
-response=$(curl --silent -k \
-  -H "Authorization: PVEAPIToken=$PVUSER@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
-  https://anvers.univ-rouen.fr:8006/api2/json/version) 1>>$CURLLOG
-
-if [ $? -eq 0 ] && [ -n "$response" ]; then
-    echo "API disponible"
-else
-    echo "API indisponible, réponse='$response'"
-	exit 1
-fi
+echo "-Test de la réponse de l'API"
+./pgvm_api_call GET https://anvers.univ-rouen.fr:8006/api2/json/version
 
 
-items=("Liste VM" "Création VMs" "Suppression VMs")
+items=("Génération inventaire" "Création VMs" "Suppression VMs")
 
 while item=$(zenity --list \
 	--title="Menu principal" \

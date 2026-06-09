@@ -1,0 +1,44 @@
+#!/bin/bash
+
+# name: pgvm_api_call
+# S. Kramm, URN, 2026
+
+#echo "a1=-$1- a2=-$2-"
+#echo "PVUSER=${PVUSER}\nREALM=${REALM}\nTOK_NAME=${TOK_NAME}\nTOK_VALUE=${TOK_VALUE}"
+
+if [ "$2" = "" ]
+then
+	echo "Internal error, endpoint missing"
+	exit 1
+fi
+
+if [ "$1" = "" ]
+then
+	echo "Internal error, POST or GET missing"
+	exit 1
+fi
+
+# faut-il vraiment tout tester???
+if [ "$PVUSER" = "" ];
+then
+	echo "Internal error, PVUSER not defined"
+	exit 1
+fi
+#set -x
+
+response=$(curl -k \
+	--silent -X $1 \
+	-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
+	"$2")
+err=$?
+
+if ! [ $err = 0 ];
+then
+	echo "Error: API call failure, HTTP method=$1 endpoint=$2"
+	exit 1
+fi
+
+export response
+exit 0
+
+
