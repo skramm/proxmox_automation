@@ -3,7 +3,9 @@
 # name: pgvm ("Proxmox Gestion VM")
 # S. Kramm, URN, 2026
 
-#TOKEN_FILE=../token_20260110
+# all API calls will be done on this one.
+# in case it breaks, just change to another one
+APINODE=anvers
 
 if [ "$1" = "" ]
 then
@@ -25,13 +27,13 @@ export TOK_VALUE
 export TOK_NAME
 export REALM
 export CURLLOG
-
+export APINODE
 
 # vérification que zenity est installé
 which zenity >/dev/null
 if [ $? = 1 ]
 then
-	echo "Erreur: zenity pas disponible"
+	echo "Error: zenity night available, please install"
 	exit 1
 fi
 
@@ -43,7 +45,7 @@ mkdir -p /tmp/proxmox
 
 # test de la réponse de l'API
 echo "-Test de la réponse de l'API"
-./pgvm_api_call GET https://anvers.univ-rouen.fr:8006/api2/json/version
+./pgvm_api_call GET https://${APINODE}.univ-rouen.fr:8006/api2/json/version
 
 
 items=("Génération inventaire" "Création VMs" "Suppression VMs")

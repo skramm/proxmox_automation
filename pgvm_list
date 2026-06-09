@@ -35,7 +35,7 @@ function process()
 #	echo "process $1"
 	curl -k --silent \
 		-H "Authorization: PVEAPIToken=$PVUSER@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
-		https://anvers.univ-rouen.fr:8006/api2/json/nodes/$1/qemu | jq -r '.data[]' >out_$1.json 2>>$CURLLOG
+		https://${APINODE}.univ-rouen.fr:8006/api2/json/nodes/$1/qemu | jq -r '.data[]' >out_$1.json 2>>$CURLLOG
 	err=$?
 	if ! [ $err = 0 ]
 	then
@@ -88,7 +88,7 @@ function process()
 echo "-Récupération liste des nodes..."
 curl --silent -k \
 	-H "Authorization: PVEAPIToken=$PVUSER@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
-	https://anvers.univ-rouen.fr:8006/api2/json/nodes|jq | jq -r '.data[] | .node' >nodes.csv 2>>$CURLLOG
+	https://${APINODE}.univ-rouen.fr:8006/api2/json/nodes|jq | jq -r '.data[] | .node' >nodes.csv 2>>$CURLLOG
 
 echo "-Nodes accessibles: $(wc -l < nodes.csv)"
 
