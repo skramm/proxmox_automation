@@ -56,4 +56,8 @@ Avec:
 - `NN`: un identifiant de la machine, lors de la création d'un ensemble de VM (01 à 99)
 
 
+### Tags
+
+Pour l'instant, les tags multiples ne sont pas gérés
+
 

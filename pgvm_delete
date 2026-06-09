@@ -40,13 +40,32 @@ if [ $? != 0 ]; then
 	echo "Interruption"; exit 1
 fi
 echo "START=$START"
-exit1
+#exit 1
 
 #-------------------------
 # Suppression des machines
 
 
-set -x
+set +x
+COMPT=0
+IFS=";";while read -a TAB
+do
+#	echo "*${TAB[0]}* *${TAB[1]}* *${TAB[2]}* *${TAB[3]}*"
+	if ! [ "${TAB[3]}" = "" ]; then
+		if [ ${TAB[3]} = $TAGDEL ]; then
+			if [ ${TAB[4]} = 0 ]; then
+				echo "node ${TAB[0]}: suppression machine ${TAB[2]}, id=${TAB[1]}"
+				((COMPT++))
+			else
+				echo "node ${TAB[0]}: machine ${TAB[2]}, id=${TAB[1]} est un template, pas de suppression"			
+			fi
+		fi
+	fi
+done <out_all.csv
+
+echo "-$COMPT VM supprimées"
+exit 1
+
 for i in $(seq 1 $NB)
 do
 	NUM=$i

@@ -133,9 +133,6 @@ do
 	err=$?
 	echo "response=-$response- err=$err"
 	if ! [ $err = 0 ]; then exit 1; fi
-done
-
-exit 0
 
 	echo "Ajout des tags"
 # ref: https://pve.proxmox.com/pve-docs/api-viewer/#/nodes/{node}/qemu/{vmid}/config
