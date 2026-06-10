@@ -19,7 +19,14 @@ if [ $? != 0 ]; then
 fi
 echo "ISOK=$ISOK"
 
-NODE=$(zenity --list --text="Choisissez le noeud" --column="nodes" anvers gand bruxelles)
+# re-create an array holding the nodes names
+declare -a NODEARR
+while read -r nodename
+do
+	NODEARR+=($nodename)
+done < nodes.csv
+
+NODE=$(zenity --list --text="Choisissez le noeud où créer la VM" --column="nodes" ${NODEARR[@]})
 if [ $? != 0 ]; then
 	echo "Interruption"; exit 1
 fi

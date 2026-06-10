@@ -49,13 +49,13 @@ response=$(./pgvm_api_call GET https://${APINODE}.univ-rouen.fr:8006/api2/json/v
 if ! [ $? = 0 ]; then
 	exit 1
 fi
-echo "response=$response"
+#echo "response=$response"
 echo "-connection API: fonctionnelle!"
 
 
-items=("Génération inventaire" "Liste par Node" "Création VMs" "Suppression VMs")
+items=("Génération inventaire" "Liste par Node" "Création VMs" "Suppression VMs" "Liste users")
 
-while item=$(zenity --list \
+while item=$(zenity --height=400 --list \
 	--title="Menu principal" \
 	--text="Choix" \
 	--column="Options" "${items[@]}")
@@ -69,6 +69,7 @@ do
 		"${items[1]}") ./pgvm_view;;
 		"${items[2]}") ./pgvm_create;;
 		"${items[3]}") ./pgvm_delete;;
+		"${items[4]}") ./pgvm_users;;
 		*) echo "Ooops! Invalid option.";;
 	esac
 done

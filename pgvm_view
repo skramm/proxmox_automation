@@ -11,7 +11,14 @@ set +x
 # désactive l'interprétation de '!' dans une chaine
 set +H
 
-VNODE=$(zenity --list --text="Quel node?" --column="node" anvers gand bruxelles)
+# re-create an array holding the nodes names
+declare -a NODEARR
+while read -r nodename
+do
+	NODEARR+=($nodename)
+done < nodes.csv
+
+VNODE=$(zenity --list --text="Quel node?" --column="node" "${NODEARR[@]}")
 if [ $? != 0 ]; then
 	echo "Interruption"; exit 1
 fi

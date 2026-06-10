@@ -5,6 +5,16 @@ Date: 2026/06
 
 !!! WIP !!!
 
+
+## TODO:
+
+- gestion des permissions
+
+voir
+https://pve.proxmox.com/pve-docs/api-viewer/#/access/acl
+
+https://chatgpt.com/c/6a285885-2634-83ed-9ca0-cba201d102ba
+
 ## Introduction
 
 Objectif de ces scripts:

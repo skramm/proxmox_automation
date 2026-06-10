@@ -1,0 +1,72 @@
+#!/bin/bash
+
+# nom: pgvm_users
+# Visualisation des utilisateurs enregistrés
+
+# ce script doit être appelé depuis le script maitre pgvm
+
+# -x pour debug
+set +x
+
+# désactive l'interprétation de '!' dans une chaine
+set +H
+
+
+curl --insecure --silent -X GET \
+	-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
+	"https://${APINODE}.univ-rouen.fr:8006/api2/json/access/users?full=1" | jq '.data[]' >/tmp/proxmox/users.json
+
+err=$?
+if [ $err != 0 ]; then
+	echo "Error: failure of operation, err=$err";
+	exit 1
+fi
+
+jq -r '.userid + ";" + .groups'</tmp/proxmox/users.json >/tmp/proxmox/users.csv
+
+echo -e "\n-Nb utilisateurs enregistrés: $(wc -l<users.csv) "
+sort /tmp/proxmox/users.csv >users.csv
+
+# build list of groups, and count nb users per group
+declare -A NBUSGR
+if [ -f /tmp/proxmox/groups1.csv ]; then rm /tmp/proxmox/groups1.csv; fi
+IFS=";";while read -a TAB
+do
+	gr=${TAB[1]}
+	echo "$gr">>/tmp/proxmox/groups1.csv
+	if ! [ "$gr" = "" ]; then
+		((NBUSGR[$gr]++))
+	fi
+done <users.csv
+
+sort /tmp/proxmox/groups1.csv >/tmp/proxmox/groups2.csv
+uniq /tmp/proxmox/groups2.csv > groups.csv
+
+# re-create an array holding the group names, just for the zenity call below
+declare -a GROUPARR
+while read -r group
+do
+	GROUPARR+=($group)
+done < groups.csv
+
+GROUP=$(zenity --list --text="Quel groupe?" --column="groupes" "${GROUPARR[@]}")
+if [ $? != 0 ]; then
+	echo "Interruption"; exit 1
+fi
+
+echo "- Groupe $GROUP: ${NBUSGR[$GROUP]} utilisateurs"
+printf "| Groupe |      Id       |\n";
+printf "|---------+------------------|\n"
+
+IFS=";";while read -a TAB
+do
+	if [ "$GROUP" = "${TAB[1]}" ];
+	then
+		printf " %8s | %12s |\n" ${TAB[1]} ${TAB[0]}
+	fi
+done <users.csv
+printf "|------+------------------+------------+--------------|\n"
+
+exit 0
+
+

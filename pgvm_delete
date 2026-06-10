@@ -50,25 +50,28 @@ COMPT=0
 IFS=";";while read -a TAB
 do
 	if ! [ "${TAB[3]}" = "" ]; then
-		if [ ${TAB[3]} = $TAGDEL ]; then
-			if [ ${TAB[4]} = 0 ]; then
-				echo "node ${TAB[0]}: suppression machine ${TAB[2]}, id=${TAB[1]}"
-				response=$(curl --insecure --silent -X DELETE \
-					-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
-					"https://${APINODE}.univ-rouen.fr:8006/api2/json/nodes/${TAB[0]}/qemu/${TAB[1]}?node=${TAB[0]}&vmid=${TAB[1]}")
-				err=$?
+		IFS=","; read -r -a TAGS <<< "${TAB[3]}"; IFS=";"
+		for ((i=0; i<${#TAGS[@]}; i++))
+		do
+			tag=${TAGS[$i]}
+#				echo "node ${TAB[0]}: machine ${TAB[2]}, tag=$tag"
+			if [ $tag = $TAGDEL ]; then
+				if [ "${TAB[4]}" = "1" ]; then
+					echo "node ${TAB[0]}: machine ${TAB[2]}, id=${TAB[1]} est un template, pas de suppression"
+				else
+					echo "node ${TAB[0]}: suppression machine ${TAB[2]}, id=${TAB[1]}"
+					response=$(curl --insecure --silent -X DELETE \
+						-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
+						"https://${APINODE}.univ-rouen.fr:8006/api2/json/nodes/${TAB[0]}/qemu/${TAB[1]}?node=${TAB[0]}&vmid=${TAB[1]}")
+					err=$?
 
-				if [ $err != 0 ]; then
-					echo "Error: failure of delete operation, err=$err, response='$response'";
-					exit 1
+					if [ $err != 0 ]; then
+						echo "Error: failure of delete operation, err=$err, response='$response'";
+						exit 1
+					fi
+					((COMPT++))
 				fi
-
-#				echo "response=$response err=$err"
-
-				((COMPT++))
-			else
-				echo "node ${TAB[0]}: machine ${TAB[2]}, id=${TAB[1]} est un template, pas de suppression"			
-			fi
+			done
 		fi
 	fi
 done <out_all.csv
