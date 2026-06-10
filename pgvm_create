@@ -160,8 +160,8 @@ do
 		--silent -X PUT \
 		-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
 		--data-urlencode "path=/vms/$VMID" \
-		--data-urlencode "users=?????" \
-		--data-urlencode "roles=PVEAdmin" \
+		--data-urlencode "groups=$GROUP" \
+		--data-urlencode "roles=PVEVMUser" \
 		--data-urlencode "propagate=1" \
 		"https://${APINODE}.univ-rouen.fr:8006/api2/json/access/acl")
 	err=$?
