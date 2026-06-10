@@ -45,16 +45,26 @@ echo "START=$START"
 #-------------------------
 # Suppression des machines
 
-
 set +x
 COMPT=0
 IFS=";";while read -a TAB
 do
-#	echo "*${TAB[0]}* *${TAB[1]}* *${TAB[2]}* *${TAB[3]}*"
 	if ! [ "${TAB[3]}" = "" ]; then
 		if [ ${TAB[3]} = $TAGDEL ]; then
 			if [ ${TAB[4]} = 0 ]; then
 				echo "node ${TAB[0]}: suppression machine ${TAB[2]}, id=${TAB[1]}"
+				response=$(curl --insecure --silent -X DELETE \
+					-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
+					"https://${APINODE}.univ-rouen.fr:8006/api2/json/nodes/${TAB[0]}/qemu/${TAB[1]}?node=${TAB[0]}&vmid=${TAB[1]}")
+				err=$?
+
+				if [ $err != 0 ]; then
+					echo "Error: failure of delete operation, err=$err, response='$response'";
+					exit 1
+				fi
+
+#				echo "response=$response err=$err"
+
 				((COMPT++))
 			else
 				echo "node ${TAB[0]}: machine ${TAB[2]}, id=${TAB[1]} est un template, pas de suppression"			
@@ -64,22 +74,6 @@ do
 done <out_all.csv
 
 echo "-$COMPT VM supprimées"
-exit 1
+exit 0
 
-for i in $(seq 1 $NB)
-do
-	NUM=$i
-	if [ 1 = ${#i} ]; then NUM=0$i;fi
-	echo "CREATION CLONE i=$NUM"
-	
-#curl --silent -k \
-	response=$(curl -k \
-		-H "Authorization: PVEAPIToken=${USER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
-		"https://${APINODE}.univ-rouen.fr:8006/api2/json/nodes/$NODE/qemu/$VMID/clone?node=$NODE&vmid=$VMID&newid=${YEARDAY}${ID}${NUM}&name=${MOD}_$i")
-	err=$?
-	echo "response=$response err=$err"
-
-	echo "Ajout des tags"
-
-done
 

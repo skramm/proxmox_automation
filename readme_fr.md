@@ -16,10 +16,10 @@ Note: inspiré par la présentation de ?? à l'ACD St Malo, juin 2026
 Pour l'utilisation générale de Proxmox,
 [voir ici](https://gitlab.univ-rouen.fr/litis-kramm/RT_docs/-/blob/main/proxmox/tuto_proxmox.md)
 
-
-
 (**note**: Implique d'avoir un compte URN et l'accès au gitlab via le CAS URN)
 
+- Référence API: https://pve.proxmox.com/pve-docs/api-viewer/
+- wiki: https://pve.proxmox.com/wiki/Proxmox_VE_API
 
 ## Items documentés
 
@@ -39,6 +39,13 @@ PVUSER=ZZZZ
 Et remplacer `XXX` et `YYY` par nom et valeur du token généré, et ZZZZ par votre id "5+3" URN.
 
 Dans ces scripts, ce fichier sera lu (avec `source`) de façon à récupérer les informations d'identification.
+
+
+### Suppression d'un ensemble de VM
+
+En l'état, on ne peut supprimer un ensemble de VM que par les tags.
+
+Attention, une machine peut avoir plusieurs tags (par exemple R123 et R456) et si on demande de supprimer toutes les VM avec le tag R456, alors celle-ci sera supprimée aussi.
 
 
 
@@ -63,6 +70,7 @@ Avec:
 
 ### Tags
 
-Pour l'instant, les tags multiples ne sont pas gérés
+...
+
 
 

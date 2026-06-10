@@ -16,9 +16,9 @@ if [ $? != 0 ]; then
 	echo "Interruption"; exit 1
 fi
 
-echo "Liste des $(wc -l<out_$VNODE.csv) machines du node '$VNODE'"
-printf "| VM/T |        Nom       |     Id     |   Tags   |\n";
-printf "|------+------------------+------------+----------|\n"
+echo -e "\n-Liste des $(wc -l<out_$VNODE.csv) machines du node '$VNODE'"
+printf "| VM/T |        Nom       |    VMId    |     Tags     |\n";
+printf "|------+------------------+------------+--------------|\n"
 
 IFS=";";while read -a TAB
 do
@@ -27,9 +27,9 @@ do
 	else
 		printf "|  VM  |"
 	fi
-	printf " %16s | %10d | %8s |\n" ${TAB[1]} ${TAB[0]} ${TAB[2]}
+	printf " %16s | %10d | %12s |\n" ${TAB[1]} ${TAB[0]} ${TAB[2]}
 done <out_$VNODE.csv
-printf "|------+------------------+------------+----------|\n"
+printf "|------+------------------+------------+--------------|\n"
 
 exit 0
 

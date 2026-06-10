@@ -22,7 +22,7 @@ CURLLOG=/tmp/proxmox/curl_$TODAY.log
 function process()
 {
 #	echo "process $1"
-	curl -k --silent \
+	curl --insecure --silent -X GET \
 		-H "Authorization: PVEAPIToken=$PVUSER@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
 		https://${APINODE}.univ-rouen.fr:8006/api2/json/nodes/$1/qemu | jq -r '.data[]' >/tmp/proxmox/out_$1.json 2>>$CURLLOG
 	err=$?
@@ -31,13 +31,20 @@ function process()
 		echo "node '$1': echec!"
 		exit 1
 	fi
-	jq -r '(.vmid|tostring) + ";" + .name + ";" + .tags + ";" + (.template|tostring)' < /tmp/proxmox/out_$1.json >/tmp/out.csv
+# we use the '_' character to separate fields because in the json file, multiple tags are separated with ';'
+	jq -r '(.vmid|tostring) + "_" + .name + "_" + .tags + "_" + (.template|tostring)' < /tmp/proxmox/out_$1.json >/tmp/proxmox/out_$1.csv
 
-# replace null by 0; just to make it prettier
-	sed -i -e 's/;null/;0/g' /tmp/out.csv
+# replace null by 0 (machine not a template), just to make it prettier
+	sed -i -e 's/;null/;0/g' /tmp/proxmox/out_$1.csv
+
+# replace the semi-colon separating tags with a comma
+	sed -i -e 's/;/,/g' /tmp/proxmox/out_$1.csv
+
+# replace the underscore by semi-colon
+	sed -i -e 's/_/;/g' /tmp/proxmox/out_$1.csv
 
 # sort by name
-	sort --key=1 /tmp/out.csv >out_$1.csv
+	sort --key=1 /tmp/proxmox/out_$1.csv >out_$1.csv
 	
 # Add node name on each line, first position
 	IFS=";";while read line;
@@ -45,8 +52,7 @@ function process()
 		echo "$1;${line}" >> $OUT
  	done < out_$1.csv
 
-
-# extraction des template de chaque node
+	# extraction des template de chaque node
 	NBT=0
 	if [ -f template_$1.csv ]; then rm template_$1.csv; fi
 	IFS=";";while read -a ARR
@@ -59,13 +65,18 @@ function process()
 			echo "$1;${ARR[1]};${ARR[2]};${ARR[0]}" >> template_all.csv
 		fi
 
-# comptage de tags
+# comptage du nb d'occurrence pour chaque tag
 		if ! [ "${ARR[2]}" = "" ]
 		then
-			tag=${ARR[2]}
-			((TAGARR[$tag]++))
+			tags=${ARR[2]}
+			IFS=","; read -a ARR2 <<< "$tags"; IFS=";"
+			for ((i=0;i<${#ARR2[@]}; i++))
+			do
+				tag=${ARR2[$i]}
+				((TAGARR[$tag]++))
+				echo "$tag">>/tmp/proxmox/tags.csv
+			done
 		fi
-
 	done < out_$1.csv
 
 #	echo " -node '$1': $(wc -l <out_$1.csv) machines, dont $NBT template(s)"
@@ -77,12 +88,12 @@ function process()
 	((TOT3+=NBTOT))
 	
 # Génération d'un CSV contenant tous les tags (format à définir?)
-	IFS=";";while read -a ARR
-	do
-		echo "${ARR[3]}">>/tmp/proxmox/tags.csv
-	done <$OUT
-	sort /tmp/proxmox/tags.csv >/tmp/proxmox/tags1.csv
-	uniq /tmp/proxmox/tags1.csv >tags.csv
+#	IFS=";";while read -a ARR
+#	do
+#		echo "${ARR[3]}">>/tmp/proxmox/tags.csv
+#	done <$OUT
+#	sort /tmp/proxmox/tags.csv >/tmp/proxmox/tags1.csv
+#	uniq /tmp/proxmox/tags1.csv >tags.csv
 }
 #---------------------------------------------------------------------------
 
@@ -123,11 +134,14 @@ do
 done < template_all.csv
 echo "|------------+---------------+-----------------+---------|"
 
+#echo -e "\n--- Tags ---"
 
-echo -e "\n--- Tags ---"
 
-echo "|    Tags    | VM+T. |"
-echo "|------------+-------|"
+sort /tmp/proxmox/tags.csv >/tmp/proxmox/tags1.csv
+uniq /tmp/proxmox/tags1.csv >tags.csv
+
+
+echo -e "\n|    Tags    | VM+T. |\n|------------+-------|"
 for i in "${!TAGARR[@]}"
 do
 	printf "| %10s | %5d |\n" $i ${TAGARR[$i]}
