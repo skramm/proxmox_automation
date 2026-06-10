@@ -22,7 +22,8 @@ if [ $err != 0 ]; then
 	exit 1
 fi
 
-jq -r '.userid + ";" + .groups'</tmp/proxmox/users.json >/tmp/proxmox/users.csv
+# convert json into 3-fields CSV file
+jq -r '.userid + ";" + .groups + ";" + .email'</tmp/proxmox/users.json >/tmp/proxmox/users.csv
 
 echo -e "\n-Nb utilisateurs enregistrés: $(wc -l<users.csv) "
 sort /tmp/proxmox/users.csv >users.csv
@@ -49,23 +50,23 @@ do
 	GROUPARR+=($group)
 done < groups.csv
 
-GROUP=$(zenity --list --text="Quel groupe?" --column="groupes" "${GROUPARR[@]}")
+GROUP=$(zenity --list --height=300 --text="Quel groupe?" --column="groupes" "${GROUPARR[@]}")
 if [ $? != 0 ]; then
 	echo "Interruption"; exit 1
 fi
 
 echo "- Groupe $GROUP: ${NBUSGR[$GROUP]} utilisateurs"
-printf "| Groupe |      Id       |\n";
-printf "|---------+------------------|\n"
+printf "|      Id      |                   email                  |\n";
+printf "|--------------+------------------------------------------|\n"
 
 IFS=";";while read -a TAB
 do
 	if [ "$GROUP" = "${TAB[1]}" ];
 	then
-		printf " %8s | %12s |\n" ${TAB[1]} ${TAB[0]}
+		printf "| %12s | %-40s |\n" ${TAB[0]} ${TAB[2]}
 	fi
 done <users.csv
-printf "|------+------------------+------------+--------------|\n"
+printf "|--------------+------------------------------------------|\n"
 
 exit 0
 
