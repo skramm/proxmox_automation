@@ -31,8 +31,9 @@ Une fois ce token obtenu, il faut le placer dans un fichier qui devra contenir l
 TOK_NAME=XXX
 TOK_VALUE=YYY
 REALM=UR
+PVUSER=ZZZZ
 ```
-Et remplacer `XXX` et `YYY` par nom et valeur du token généré.
+Et remplacer `XXX` et `YYY` par nom et valeur du token généré, et ZZZZ par votre id "5+3" URN.
 
 Dans ces scripts, ce fichier sera lu (avec `source`) de façon à récupérer les informations d'identification.
 
@@ -40,7 +41,8 @@ Dans ces scripts, ce fichier sera lu (avec `source`) de façon à récupérer le
 
 ### Numérotation des clones
 
-Avec l'API, il n'y a pas génération automatique d'un ID, il faut en donner un dans la requete, et il doit être unique sur tout le cluster.
+Avec l'API, il n'y a pas génération automatique d'un ID (comme c'est le cas avec l'interface web), il faut en donner un dans la requete à l'API.
+Cet identifiant (entier) doit être unique sur tout le cluster.
 
 valeur max: 999999999 (9 chiffres)
 
