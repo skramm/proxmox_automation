@@ -24,22 +24,22 @@ function process()
 #	echo "process $1"
 	curl -k --silent \
 		-H "Authorization: PVEAPIToken=$PVUSER@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
-		https://${APINODE}.univ-rouen.fr:8006/api2/json/nodes/$1/qemu | jq -r '.data[]' >out_$1.json 2>>$CURLLOG
+		https://${APINODE}.univ-rouen.fr:8006/api2/json/nodes/$1/qemu | jq -r '.data[]' >/tmp/proxmox/out_$1.json 2>>$CURLLOG
 	err=$?
 	if ! [ $err = 0 ]
 	then
 		echo "node '$1': echec!"
 		exit 1
 	fi
-	jq -r '(.vmid|tostring) + ";" + .name + ";" + .tags + ";" + (.template|tostring)' < out_$1.json >/tmp/out.csv
+	jq -r '(.vmid|tostring) + ";" + .name + ";" + .tags + ";" + (.template|tostring)' < /tmp/proxmox/out_$1.json >/tmp/out.csv
 
-# replace null by 0
+# replace null by 0; just to make it prettier
 	sed -i -e 's/;null/;0/g' /tmp/out.csv
 
 # sort by name
 	sort --key=1 /tmp/out.csv >out_$1.csv
 	
-# Ajout nom node en tete du csv
+# Add node name on each line, first position
 	IFS=";";while read line;
 	do
 		echo "$1;${line}" >> $OUT
@@ -71,7 +71,7 @@ function process()
 #	echo " -node '$1': $(wc -l <out_$1.csv) machines, dont $NBT template(s)"
 	NBTOT=$(wc -l <out_$1.csv)
 	((NBVM=NBTOT-NBT))
-	printf "| %10s | %5d | %7d | %5d |\n" $1 $NBVM $NBT $NBTOT
+	printf "| %10s | %5d | %9d | %5d |\n" $1 $NBVM $NBT $NBTOT
 	((TOT1+=NBVM))
 	((TOT2+=NBT))
 	((TOT3+=NBTOT))
@@ -79,10 +79,10 @@ function process()
 # Génération d'un CSV contenant tous les tags (format à définir?)
 	IFS=";";while read -a ARR
 	do
-		echo "${ARR[3]}">>tags2.csv
+		echo "${ARR[3]}">>/tmp/proxmox/tags.csv
 	done <$OUT
-	sort tags2.csv >tags1.csv
-	uniq tags1.csv >tags.csv
+	sort /tmp/proxmox/tags.csv >/tmp/proxmox/tags1.csv
+	uniq /tmp/proxmox/tags1.csv >tags.csv
 }
 #---------------------------------------------------------------------------
 
@@ -94,14 +94,14 @@ curl --silent -k \
 
 echo "-Nodes accessibles: $(wc -l < nodes.csv)"
 
-if [ -f tags2.csv ]; then rm tags2.csv; fi
+if [ -f /tmp/proxmox/tags.csv ]; then rm /tmp/proxmox/tags.csv; fi
 if [ -f template_all.csv ]; then rm template_all.csv; fi
 
 # associative array used to count tags
 declare -A TAGARR
 
 echo "|    Node    | Nb VM | Nb Templ. |  Tot  |"
-echo "|------------+-------+---------+-------|"
+echo "|------------+-------+-----------+-------|"
  
 TOT1=0
 TOT2=0
@@ -110,8 +110,8 @@ while read -r nodename
 do
 	process $nodename
 done < nodes.csv
-echo "|------------+-------+---------+-------|"
-printf "      Totaux | %5d | %7d | %7d |\n" $TOT1 $TOT2 $TOT3
+echo "|------------+-------+-----------+-------|"
+printf "      Totaux | %5d | %9d | %5d |\n" $TOT1 $TOT2 $TOT3
 
 #echo "-Nb templates: $(wc -l<template_all.csv)"
 echo -e "\n Available templates: $(wc -l<template_all.csv)"

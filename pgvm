@@ -3,8 +3,8 @@
 # name: pgvm ("Proxmox Gestion VM")
 # S. Kramm, URN, 2026
 
-# all API calls will be done on this one.
-# in case it breaks, just change to another one
+# All API calls will be done on this one.
+# In case it breaks, just change to another one
 APINODE=anvers
 
 if [ "$1" = "" ]
@@ -17,7 +17,7 @@ TOKEN_FILE=$1
 # vérification de l'accès au fichier
 if ! [ -f $TOKEN_FILE ];
 then
-	echo "Erreur, fichier $TOKEN_FILE introuvable!"
+	echo "Erreur, fichier '$TOKEN_FILE' introuvable!"
 	exit 1
 fi
 source $TOKEN_FILE
@@ -29,23 +29,28 @@ export REALM
 export CURLLOG
 export APINODE
 
-# vérification que zenity est installé
+# Check that zenity is available
 which zenity >/dev/null
 if [ $? = 1 ]
 then
-	echo "Error: zenity night available, please install"
+	echo "Error: zenity not available, please install"
 	exit 1
 fi
 
 TODAY=$(date '+%Y%m%d_%H%M%S')
 CURLLOG=/tmp/proxmox/curl_$TODAY.log
 
-# on stocke les logs de curl la bas
+# temporary files are stored over there
 mkdir -p /tmp/proxmox
 
 # test de la réponse de l'API
 echo "-Test de la réponse de l'API"
-./pgvm_api_call GET https://${APINODE}.univ-rouen.fr:8006/api2/json/version
+response=$(./pgvm_api_call GET https://${APINODE}.univ-rouen.fr:8006/api2/json/version)
+if ! [ $? = 0 ]; then
+	exit 1
+fi
+echo "response=$response"
+echo "-connection API: fonctionnelle!"
 
 
 items=("Génération inventaire" "Liste par Node" "Création VMs" "Suppression VMs")
@@ -55,19 +60,17 @@ while item=$(zenity --list \
 	--text="Choix" \
 	--column="Options" "${items[@]}")
 do
-if [ $? != 0 ]; then
-	echo "Interruption"; exit 1
-fi
+	if [ $? != 0 ]; then
+		echo "Interruption"; exit 1
+	fi
 
-echo "item=$item"
-
-case "$item" in
-	"${items[0]}") ./pgvm_list;;
-	"${items[1]}") ./pgvm_view;;
-	"${items[2]}") ./pgvm_create;;
-	"${items[3]}") ./pgvm_delete;;
-	*) echo "Ooops! Invalid option.";;
-esac
+	case "$item" in
+		"${items[0]}") ./pgvm_list;;
+		"${items[1]}") ./pgvm_view;;
+		"${items[2]}") ./pgvm_create;;
+		"${items[3]}") ./pgvm_delete;;
+		*) echo "Ooops! Invalid option.";;
+	esac
 done
 
 echo "fini!"

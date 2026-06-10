@@ -7,7 +7,8 @@ Date: 2026/06
 
 ## Introduction
 
-Objectif de ces scripts: avoir des outils permettant de lister, créer/supprimer, démarrer/éteindre, etc.
+Objectif de ces scripts:
+avoir des outils permettant de lister, créer/supprimer, démarrer/éteindre, etc.
 un ensemble de VM pour des TPs, et s'appuyant sur l'API de Proxmox.
 
 Note: inspiré par la présentation de ?? à l'ACD St Malo, juin 2026
@@ -16,7 +17,9 @@ Pour l'utilisation générale de Proxmox,
 [voir ici](https://gitlab.univ-rouen.fr/litis-kramm/RT_docs/-/blob/main/proxmox/tuto_proxmox.md)
 
 
+
 (**note**: Implique d'avoir un compte URN et l'accès au gitlab via le CAS URN)
+
 
 ## Items documentés
 

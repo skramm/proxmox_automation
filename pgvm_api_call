@@ -26,7 +26,9 @@ then
 fi
 #set -x
 
-response=$(curl -k \
+# if no response within 5 s., abort
+response=$(curl --insecure \
+	--connect-timeout 5 \
 	--silent -X $1 \
 	-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
 	"$2")
@@ -34,11 +36,11 @@ err=$?
 
 if ! [ $err = 0 ];
 then
-	echo "Error: API call failure, HTTP method=$1 endpoint=$2"
+	echo "Error: API call failure, HTTP method='$1', endpoint='$2'"
+	echo "curl response: $response"
 	exit 1
 fi
 
-export response
 exit 0
 
 
