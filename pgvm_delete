@@ -71,8 +71,8 @@ do
 					fi
 					((COMPT++))
 				fi
-			done
-		fi
+			fi
+		done
 	fi
 done <out_all.csv
 

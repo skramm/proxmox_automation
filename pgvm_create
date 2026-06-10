@@ -83,7 +83,6 @@ i=$NB
 if ! [ "$i" = "$NB" ];
 then
 	zenity --error --text "invalid value '$NB'"
-#	echo "Erreur: valeur '$NB' invalide"
 	exit 1
 fi
 
@@ -140,8 +139,9 @@ do
 		-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
 		"https://${APINODE}.univ-rouen.fr:8006/api2/json/nodes/$NODE/qemu/$VMID/clone?node=$NODE&vmid=$VMID&newid=${YEARDAY}${ID}${NUM}&name=${MOD}-$i")
 	err=$?
-	echo "response=-$response- err=$err"
-	if ! [ $err = 0 ]; then exit 1; fi
+	if ! [ $err = 0 ]; then
+		echo "response=-$response- err=$err"; exit 1
+	fi
 
 	echo "Ajout des tags"
 # ref: https://pve.proxmox.com/pve-docs/api-viewer/#/nodes/{node}/qemu/{vmid}/config
@@ -150,8 +150,24 @@ do
 		-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
 		"https://${APINODE}.univ-rouen.fr:8006/api2/json/nodes/$NODE/qemu/$VMID/config?node=$NODE&vmid=$VMID&tags=$TAGS")
 	err=$?
-	echo "response=$response err=$err"
-	if ! [ $err = 0 ]; then exit 1; fi
+	if ! [ $err = 0 ]; then
+		echo "response=-$response- err=$err"; exit 1
+	fi
+
+	echo " -configuration permissions (roles)"
+# ref: https://pve.proxmox.com/pve-docs/api-viewer/#/access/acl	
+	response=$(curl -k \
+		--silent -X PUT \
+		-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
+		--data-urlencode "path=/vms/$VMID" \
+		--data-urlencode "users=?????" \
+		--data-urlencode "roles=PVEAdmin" \
+		--data-urlencode "propagate=1" \
+		"https://${APINODE}.univ-rouen.fr:8006/api2/json/access/acl")
+	err=$?
+	if ! [ $err = 0 ]; then
+		echo "response=-$response- err=$err"; exit 1
+	fi
 
 done
 
