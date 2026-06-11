@@ -53,8 +53,9 @@ fi
 #echo "response=$response"
 echo "-connection API: fonctionnelle!"
 
+./pgvm_list
 
-items=("Génération inventaire" "Liste par Node" "Création VMs" "Suppression VMs" "Liste users")
+items=("Génération inventaire" "Liste VMs par Node" "Création VMs" "Suppression VMs" "Liste users")
 
 while item=$(zenity --height=400 --list \
 	--title="Menu principal" \

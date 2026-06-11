@@ -19,25 +19,37 @@ do
 	GROUPARR+=($group)
 done < data_groups.csv
 
+GROUPARR+=("(Sans groupe)")
+
+#echo "GROUPARR=${GROUPARR[@]}"
+
 GROUP=$(zenity --list --height=300 --text="Quel groupe?" --column="groupes" "${GROUPARR[@]}")
 if [ $? != 0 ]; then
 	echo "Interruption"; exit 1
 fi
 
+#echo "GROUP=$GROUP"
+if [ "$GROUP" = "(Sans groupe)" ]; then
+	GROUPFILE=data_group_NOGROUP.csv
+else
+	GROUPFILE=data_group_$GROUP.csv
+fi
+
 clear
-#echo "- Groupe $GROUP: ${NBUSGR[$GROUP]} utilisateurs"
-echo "- Groupe $GROUP: ${wc -l <group_$GROUP} utilisateurs"
-printf "|      Id      |                   email                  |\n";
-printf "|--------------+------------------------------------------|\n"
+GROUPSIZE=$(wc -l <$GROUPFILE)
+echo "-Groupe '$GROUP': $GROUPSIZE utilisateurs"
+
+printf "|       Id       |                   email                  |\n";
+printf "|----------------+------------------------------------------|\n"
 
 IFS=";";while read -a TAB
 do
-	if [ "$GROUP" = "${TAB[1]}" ];
-	then
-		printf "| %12s | %-40s |\n" ${TAB[0]} ${TAB[2]}
-	fi
-done <data_users.csv
-printf "|--------------+------------------------------------------|\n"
+#	if [ "$GROUP" = "${TAB[1]}" ];
+#	then
+		printf "| %14s | %-40s |\n" ${TAB[0]} ${TAB[1]}
+#	fi
+done <$GROUPFILE
+printf "|----------------+------------------------------------------|\n"
 
 exit 0
 

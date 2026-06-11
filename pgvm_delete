@@ -13,16 +13,16 @@ set +H
 
 declare -a TAGARR
 
-if ! [ -f tags.csv ]
+if ! [ -f data_tags.csv ]
 then
-	echo "Erreur, fichier 'tags.csv' inaccessible"
+	echo "Erreur, fichier 'data_tags.csv' inaccessible"
 	exit 1
 fi
 
 IFS=";";while read TAG
 do
 	TAGARR+=($TAG)
-done <tags.csv
+done <data_tags.csv
 echo "TAGARR=${TAGARR[@]}"	
 
 
@@ -74,7 +74,7 @@ do
 			fi
 		done
 	fi
-done <out_all.csv
+done <data_out_all.csv
 
 echo "-$COMPT VM supprimées"
 exit 0

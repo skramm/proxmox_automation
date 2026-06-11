@@ -5,6 +5,12 @@ Date: 2026/06
 
 !!! WIP !!!
 
+## Outils nécessaires
+- bash
+- curl
+- zenity
+
+(devrait être disponible par défaut dans votre distrib)
 
 ## TODO:
 

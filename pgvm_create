@@ -13,18 +13,12 @@ set +H
 
 YEARDAY=$(date '+%y%j')
 
-ISOK=$(zenity --question --text "L'inventaire des machines est-il à jour?")
-if [ $? != 0 ]; then
-	./exportVM.sh PVUSER
-fi
-echo "ISOK=$ISOK"
-
 # re-create an array holding the nodes names
 declare -a NODEARR
 while read -r nodename
 do
 	NODEARR+=($nodename)
-done < nodes.csv
+done < data_nodes.csv
 
 BASENODE=$(zenity --list --text="Choisissez le noeud où créer la VM" --column="nodes" ${NODEARR[@]})
 if [ $? != 0 ]; then
@@ -34,7 +28,7 @@ fi
 echo "BASENODE=$BASENODE"
 
 # Afficher la liste des templates dispos sur ce noeud
-if ! [ -f template_$BASENODE.csv ]
+if ! [ -f data_template_$BASENODE.csv ]
 then
 	echo "Aucun template disponible sur ce noeud"
 	exit 1
@@ -47,7 +41,7 @@ do
 	echo "TEMPLATES=$TEMPLATES ARR[0]=${ARR[0]}"
 	x=${ARR[0]}
 	TEMPLATES+=($x)
-done < template_$BASENODE.csv
+done < data_template_$BASENODE.csv
 
 #echo "t=${TEMPLATES[@]}"
 
@@ -64,7 +58,7 @@ do
 	then
 		TVMID=${ARR[2]}
 	fi 
-done < template_$BASENODE.csv
+done < data_template_$BASENODE.csv
 
 echo "TVMID=$TVMID"
 
