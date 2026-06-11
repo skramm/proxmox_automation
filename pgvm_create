@@ -26,32 +26,30 @@ do
 	NODEARR+=($nodename)
 done < nodes.csv
 
-NODE=$(zenity --list --text="Choisissez le noeud où créer la VM" --column="nodes" ${NODEARR[@]})
+BASENODE=$(zenity --list --text="Choisissez le noeud où créer la VM" --column="nodes" ${NODEARR[@]})
 if [ $? != 0 ]; then
 	echo "Interruption"; exit 1
 fi
 
-echo "NODE=$NODE"
+echo "BASENODE=$BASENODE"
 
 # Afficher la liste des templates dispos sur ce noeud
-if ! [ -f template_$NODE.csv ]
+if ! [ -f template_$BASENODE.csv ]
 then
 	echo "Aucun template disponible sur ce noeud"
 	exit 1
 fi
 
 # construction chaine contenant les noms des templates
-
 declare -a TEMPLATES
 IFS=";";while read -a ARR
 do
 	echo "TEMPLATES=$TEMPLATES ARR[0]=${ARR[0]}"
 	x=${ARR[0]}
 	TEMPLATES+=($x)
-done < template_$NODE.csv
+done < template_$BASENODE.csv
 
-
-echo "t=${TEMPLATES[@]}"
+#echo "t=${TEMPLATES[@]}"
 
 TEMPLATE=$(zenity --list --text="Quel template à utiliser?" --column="templates" ${TEMPLATES[@]})
 if [ $? != 0 ]; then
@@ -66,7 +64,7 @@ do
 	then
 		TVMID=${ARR[2]}
 	fi 
-done < template_$NODE.csv
+done < template_$BASENODE.csv
 
 echo "TVMID=$TVMID"
 
@@ -84,34 +82,52 @@ if [ $? != 0 ]; then
 fi
 echo "TAGS=$TAGS"
 
-
-NAMING=$(zenity --list --text "Type de nommage?" Numérotation Utilisateur )
+# How are the machine named ?
+NAMING=$(zenity --list --text "Type de nommage?" --column="Type" Numérotation Utilisateur )
 if [ $? != 0 ]; then
 	echo "Interruption"; exit 1
 fi
-echo "NAMING=$NAMING"
 
-if [ $NAMING = Utilisateur ]
+NAMETYPE=NTN
+if [ "$NAMING" = "Utilisateur" ]; then
+	NAMETYPE=NTU
+fi
+
+echo "NAMING=$NAMING NAMETYPE=$NAMETYPE" 
+
+
+# create an array holding the group names, just for the zenity call below
+declare -a GROUPARR
+while read -r group
+do
+	GROUPARR+=($group)
+done < groups.csv
+
+if [ "$NAMETYPE" = "NTU" ]
 then
-	GROUPSEL=$(zenity --list --text "Quel groupe d'utilisateurs?" ${GROUPS[@]} )
+	GROUPSEL=$(zenity --list --text "Quel groupe d'utilisateurs?" --column="Groupe" ${GROUPARR[@]} )
 	if [ $? != 0 ]; then
 		echo "Interruption"; exit 1
 	fi
 	echo "GROUPSEL=$GROUPSEL"
+	VMNAMES="${MOD}-XXX (avec XXX l'id user)"
 else
-	NB=$(zenity --entry --text "Combien de VM?")
+	NB1=$(zenity --entry --text "Combien de VM?")
 	if [ $? != 0 ]; then
 		echo "Interruption"; exit 1
 	fi
 
-	i=$NB
+	i=$NB1
 	((i++))
 	((i--))
-	if ! [ "$i" = "$NB" ];
+	if ! [ "$i" = "$NB1" ];
 	then
-		zenity --error --text "invalid value '$NB'"
+		zenity --error --text "invalid value '$NB1'"
 		exit 1
 	fi
+	NB=$NB1
+	if [ $NB1 -lt 10 ]; then NB=0$NB1; fi
+	VMNAMES="${MOD}-01 à ${MOD}-${NB}"
 fi
 
 ID=$(zenity --entry --text "Donner l'identifiant commun à ce set de VM, entre 00 et 99\n(ne doit pas déja exister)")
@@ -126,11 +142,10 @@ then
 	exit 1
 fi
 
-NB2=$NB
-if [ $NB -lt 10 ]; then NB2=0$NB; fi
 
+# TODO: fix this in case user name is used in the VM name
 START=$(zenity --question --text \
-	"Ok pour créer $NB VM, nommées ${MOD}-01 à ${MOD}-${NB2}, basées sur le template $TEMPLATE et ayant les tags '$TAGS'?")
+	"Ok pour créer $NB VM ?\n- sur le node $BASENODE,\n- nommées ${VMNAMES},\n- basées sur le template $TEMPLATE,\n- ayant les tags '$TAGS'?")
 if [ $? != 0 ]; then
 	echo "Interruption"; exit 1
 fi
@@ -146,13 +161,20 @@ do
 	if [ 1 = ${#i} ]; then NUM="0$i";fi
 #	echo "i=-$i- NUM=-$NUM-, size=${#NUM}"
 	VMID=${YEARDAY}${ID}${NUM}
-	echo "-Creation clone $i: nom=${MOD}-${NUM}, id=$VMID"
+	if [ "$NAMETYPE" = "NTU" ]; then
+		echo "NOT IMPLEMENTED!!!"
+		exit 1
+	else
+		VMNAME=${MOD}-${NUM}
+	fi
+	
+	echo "-Creation clone $i: nom=${VMNAME}, id=$VMID"
 	
 # ref: https://pve.proxmox.com/pve-docs/api-viewer/#/nodes/{node}/qemu/{vmid}/clone
 	response=$(curl -k \
 		--silent -X POST \
 		-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
-		"https://${APINODE}.univ-rouen.fr:8006/api2/json/nodes/$NODE/qemu/$TVMID/clone?node=$NODE&vmid=$TVMID&newid=$VMID&name=${MOD}-$i")
+		"https://${APINODE}.univ-rouen.fr:8006/api2/json/nodes/$BASENODE/qemu/$TVMID/clone?node=$BASENODE&vmid=$TVMID&newid=$VMID&name=${VMNAME}")
 	err=$?
 	if ! [ $err = 0 ]; then
 		echo "response=-$response- err=$err"; exit 1
@@ -163,7 +185,7 @@ do
 	response=$(curl -k \
 		--silent -X POST \
 		-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
-		"https://${APINODE}.univ-rouen.fr:8006/api2/json/nodes/$NODE/qemu/$VMID/config?node=$NODE&vmid=$VMID&tags=$TAGS")
+		"https://${APINODE}.univ-rouen.fr:8006/api2/json/nodes/$BASENODE/qemu/$VMID/config?node=$BASENODE&vmid=$VMID&tags=$TAGS")
 	err=$?
 	if ! [ $err = 0 ]; then
 		echo "response=-$response- err=$err"; exit 1

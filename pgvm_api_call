@@ -33,7 +33,7 @@ response=$(curl --insecure \
 	-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
 	"$2")
 err=$?
-
+echo "err=$err"
 if ! [ $err = 0 ];
 then
 	echo "Error: API call failure, HTTP method='$1', endpoint='$2'"

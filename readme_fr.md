@@ -8,12 +8,9 @@ Date: 2026/06
 
 ## TODO:
 
-- gestion des permissions
-
+- gestion des permissions:  
 voir
 https://pve.proxmox.com/pve-docs/api-viewer/#/access/acl
-
-https://chatgpt.com/c/6a285885-2634-83ed-9ca0-cba201d102ba
 
 ## Introduction
 
@@ -23,7 +20,7 @@ un ensemble de VM pour des TPs, et s'appuyant sur l'API de Proxmox.
 
 Note: inspiré par la présentation de ?? à l'ACD St Malo, juin 2026
 
-Pour l'utilisation générale de Proxmox,
+Pour l'utilisation générale de Proxmox dans le cadre du dept RT de l'IUT de Rouen,
 [voir ici](https://gitlab.univ-rouen.fr/litis-kramm/RT_docs/-/blob/main/proxmox/tuto_proxmox.md)
 
 (**note**: Implique d'avoir un compte URN et l'accès au gitlab via le CAS URN)

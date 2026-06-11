@@ -43,7 +43,7 @@ done <users.csv
 sort /tmp/proxmox/groups1.csv >/tmp/proxmox/groups2.csv
 uniq /tmp/proxmox/groups2.csv > groups.csv
 
-# re-create an array holding the group names, just for the zenity call below
+# create an array holding the group names, just for the zenity call below
 declare -a GROUPARR
 while read -r group
 do
@@ -55,6 +55,7 @@ if [ $? != 0 ]; then
 	echo "Interruption"; exit 1
 fi
 
+clear
 echo "- Groupe $GROUP: ${NBUSGR[$GROUP]} utilisateurs"
 printf "|      Id      |                   email                  |\n";
 printf "|--------------+------------------------------------------|\n"

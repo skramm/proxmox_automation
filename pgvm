@@ -43,6 +43,7 @@ CURLLOG=/tmp/proxmox/curl_$TODAY.log
 # temporary files are stored over there
 mkdir -p /tmp/proxmox
 
+# TODO: bug, en cas de non réponse, pas de message d'erreur !!
 # test de la réponse de l'API
 echo "-Test de la réponse de l'API"
 response=$(./pgvm_api_call GET https://${APINODE}.univ-rouen.fr:8006/api2/json/version)
