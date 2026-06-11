@@ -124,7 +124,7 @@ done < data_nodes.csv
 echo "|------------+-----+---------+-------|"
 printf "      Totaux | %3d | %7d | %5d |\n" $TOT1 $TOT2 $TOT3
 
-echo -e "\n Liste des $(wc -l<data_template_all.csv) templates:"
+echo -e "\n-Liste des $(wc -l<data_template_all.csv) templates:"
 printf "| %10s | %13s | %15s | %7s |\n" Node Name Tags VMid
 echo "|------------+---------------+-----------------+---------|"
 IFS=";";while read -a ARR
@@ -136,7 +136,8 @@ echo "|------------+---------------+-----------------+---------|"
 sort /tmp/proxmox/tags.csv >/tmp/proxmox/tags1.csv
 uniq /tmp/proxmox/tags1.csv >data_tags.csv
 
-echo -e "\n|    Tags    | VM+T. |\n|------------+-------|"
+echo -e "\n-Tags: $(wc -l <data_tags.csv)"
+echo -e "|    Tags    | VM+T. |\n|------------+-------|"
 for i in "${!TAGARR[@]}"
 do
 	printf "| %10s | %5d |\n" $i ${TAGARR[$i]}

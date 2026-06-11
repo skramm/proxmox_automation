@@ -35,7 +35,7 @@ do
 	else
 		printf "|  VM  |"
 	fi
-	printf " %16s | %10d | %13s |\n" ${TAB[1]} ${TAB[0]} ${TAB[2]}
+	printf " %-16s | %10d | %13s |\n" ${TAB[1]} ${TAB[0]} ${TAB[2]}
 done <data_out_$VNODE.csv
 printf "|------+------------------+------------+---------------|\n"
 

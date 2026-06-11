@@ -69,8 +69,8 @@ do
 	case "$item" in
 		"${items[0]}") ./pgvm_list;;
 		"${items[1]}") ./pgvm_view;;
-		"${items[2]}") ./pgvm_create;;
-		"${items[3]}") ./pgvm_delete;;
+		"${items[2]}") ./pgvm_create; ./pgvm_list;;
+		"${items[3]}") ./pgvm_delete; ./pgvm_list;;
 		"${items[4]}") ./pgvm_users;;
 		*) echo "Ooops! Invalid option.";;
 	esac
