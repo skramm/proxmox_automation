@@ -12,43 +12,12 @@ set +x
 set +H
 
 
-curl --insecure --silent -X GET \
-	-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
-	"https://${APINODE}.univ-rouen.fr:8006/api2/json/access/users?full=1" | jq '.data[]' >/tmp/proxmox/users.json
-
-err=$?
-if [ $err != 0 ]; then
-	echo "Error: failure of operation, err=$err";
-	exit 1
-fi
-
-# convert json into 3-fields CSV file
-jq -r '.userid + ";" + .groups + ";" + .email'</tmp/proxmox/users.json >/tmp/proxmox/users.csv
-
-echo -e "\n-Nb utilisateurs enregistrés: $(wc -l<users.csv) "
-sort /tmp/proxmox/users.csv >users.csv
-
-# build list of groups, and count nb users per group
-declare -A NBUSGR
-if [ -f /tmp/proxmox/groups1.csv ]; then rm /tmp/proxmox/groups1.csv; fi
-IFS=";";while read -a TAB
-do
-	gr=${TAB[1]}
-	echo "$gr">>/tmp/proxmox/groups1.csv
-	if ! [ "$gr" = "" ]; then
-		((NBUSGR[$gr]++))
-	fi
-done <users.csv
-
-sort /tmp/proxmox/groups1.csv >/tmp/proxmox/groups2.csv
-uniq /tmp/proxmox/groups2.csv > groups.csv
-
 # create an array holding the group names, just for the zenity call below
 declare -a GROUPARR
 while read -r group
 do
 	GROUPARR+=($group)
-done < groups.csv
+done < data_groups.csv
 
 GROUP=$(zenity --list --height=300 --text="Quel groupe?" --column="groupes" "${GROUPARR[@]}")
 if [ $? != 0 ]; then
@@ -56,7 +25,8 @@ if [ $? != 0 ]; then
 fi
 
 clear
-echo "- Groupe $GROUP: ${NBUSGR[$GROUP]} utilisateurs"
+#echo "- Groupe $GROUP: ${NBUSGR[$GROUP]} utilisateurs"
+echo "- Groupe $GROUP: ${wc -l <group_$GROUP} utilisateurs"
 printf "|      Id      |                   email                  |\n";
 printf "|--------------+------------------------------------------|\n"
 
@@ -66,7 +36,7 @@ do
 	then
 		printf "| %12s | %-40s |\n" ${TAB[0]} ${TAB[2]}
 	fi
-done <users.csv
+done <data_users.csv
 printf "|--------------+------------------------------------------|\n"
 
 exit 0

@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # nom: pgvm_list
-# Génération d'une liste de VM
-# ce script doit être appelé depuis le script maitre pgvm
+# Generates all the data of a cluster: list of nodes, VM, templates, users, groups, ...
+# Must be called from master script: pgvm
 
 # -x pour debug
 set +x
@@ -19,6 +19,7 @@ TODAY=$(date '+%Y%m%d_%H%M%S')
 CURLLOG=/tmp/proxmox/curl_$TODAY.log
 
 #---------------------------------------------------------------------------
+# This function is called for each node of the cluster
 function process()
 {
 #	echo "process $1"
@@ -32,6 +33,7 @@ function process()
 		exit 1
 	fi
 # we use the '_' character to separate fields because in the json file, multiple tags are separated with ';'
+# (and '_' is not allowed in the VM name field)
 	jq -r '(.vmid|tostring) + "_" + .name + "_" + .tags + "_" + (.template|tostring)' < /tmp/proxmox/out_$1.json >/tmp/proxmox/out_$1.csv
 
 # replace null by 0 (machine not a template), just to make it prettier
@@ -89,7 +91,8 @@ function process()
 }
 
 #---------------------------------------------------------------------------
-# liste des nodes 
+# Get list of nodes 
+clear
 echo "-Récupération liste des nodes..."
 curl --silent -k \
 	-H "Authorization: PVEAPIToken=$PVUSER@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
@@ -115,11 +118,9 @@ do
 	process $nodename
 done < nodes.csv
 
-
 echo "|------------+-------+-----------+-------|"
 printf "      Totaux | %5d | %9d | %5d |\n" $TOT1 $TOT2 $TOT3
 
-#echo "-Nb templates: $(wc -l<template_all.csv)"
 echo -e "\n Available templates: $(wc -l<template_all.csv)"
 printf "| %10s | %13s | %15s | %7s |\n" Node Name Tags VMid
 echo "|------------+---------------+-----------------+---------|"
@@ -129,12 +130,8 @@ do
 done < template_all.csv
 echo "|------------+---------------+-----------------+---------|"
 
-#echo -e "\n--- Tags ---"
-
-
 sort /tmp/proxmox/tags.csv >/tmp/proxmox/tags1.csv
 uniq /tmp/proxmox/tags1.csv >tags.csv
-
 
 echo -e "\n|    Tags    | VM+T. |\n|------------+-------|"
 for i in "${!TAGARR[@]}"
@@ -144,6 +141,66 @@ do
 done
 echo "|------------+-------|"
 printf "       Total | %5d |\n" $COMPT
+
+
+#===========================================================
+# Generate a csv file for each group, holding the users
+
+curl --insecure --silent -X GET \
+	-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
+	"https://${APINODE}.univ-rouen.fr:8006/api2/json/access/users?full=1" | jq '.data[]' >/tmp/proxmox/users.json
+
+err=$?
+if [ $err != 0 ]; then
+	echo "Error: failure of operation, err=$err";
+	exit 1
+fi
+
+# convert json into 3-fields CSV file
+jq -r '.userid + ";" + .groups + ";" + .email'</tmp/proxmox/users.json >/tmp/proxmox/users.csv
+
+sort /tmp/proxmox/users.csv >data_users.csv
+echo -e "\n-Nb utilisateurs enregistrés: $(wc -l<data_users.csv) "
+
+# build one file per group
+rm data_group_*.csv 2>/dev/null
+declare -A NBUSGR
+if [ -f /tmp/proxmox/groups1.csv ]; then rm /tmp/proxmox/groups1.csv; fi
+IFS=";";while read -a TAB
+do
+	GR=${TAB[1]}
+	echo "$GR">>/tmp/proxmox/groups1.csv
+	if ! [ "$GR" = "" ]; then
+		echo "${TAB[0]};${TAB[2]}" >> data_group_${GR}.csv
+	else
+		echo "${TAB[0]};${TAB[2]}" >> data_group_NOGROUP.csv
+	fi
+done <data_users.csv
+
+sort /tmp/proxmox/groups1.csv >/tmp/proxmox/groups2.csv
+uniq /tmp/proxmox/groups2.csv > data_groups.csv
+
+# Parse file holding the users to get the one having no group
+
+
+NOGROUP=0
+
+
+echo -e "\n|         Group           | #Users |\n|-------------------------+--------|"
+COMPT=0
+IFS=";";while read groupname
+do
+	if ! [ "$groupname" = "" ]; then
+		nb=$(wc -l <data_group_${groupname}.csv)
+		printf "| %23s | %6d |\n" $groupname $nb
+		((COMPT+=nb))
+	fi
+done <data_groups.csv
+NBNOGROUP=$(wc -l <data_group_NOGROUP.csv)
+printf "|           (no group)    | %6d |\n" $NBNOGROUP
+((COMPT+=NBNOGROUP))
+echo "|-------------------------+--------|"
+printf "                  Total   | %6d |\n" $COMPT
 
 exit 0
 

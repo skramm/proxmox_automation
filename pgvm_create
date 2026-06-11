@@ -101,7 +101,7 @@ declare -a GROUPARR
 while read -r group
 do
 	GROUPARR+=($group)
-done < groups.csv
+done < data_groups.csv
 
 if [ "$NAMETYPE" = "NTU" ]
 then
