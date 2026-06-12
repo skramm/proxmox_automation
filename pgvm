@@ -30,6 +30,46 @@ export REALM
 export CURLLOG
 export APINODE
 
+
+#================================================================
+function ViewTags()
+{
+# re-create an array holding the tag names
+declare -a TAGARR
+while read -r tagname
+do
+	TAGARR+=($tagname)
+done < data_tags.csv
+
+VTAG=$(zenity --list --height=300 --text="Quel tag?" --column="Tags" "${TAGARR[@]}")
+if [ $? != 0 ]; then
+	echo "Interruption"; exit 1
+fi
+
+clear
+echo -e "\n-Liste des $(wc -l<data_tag_$VTAG.csv) machines ayant le tag '$VTAG':"
+printf "| VM/T |      Node     |       Nom       |    VMId     |      Tags       |\n";
+printf "|------+---------------+-----------------+-------------+-----------------|\n"
+
+IFS=";";while read -a TAB
+do
+	if [ ${TAB[3]} == 1 ]; then
+		printf "|  T   |"
+	else
+		printf "|  VM  |"
+	fi
+	printf " %-13s | %-15s | %11d | %15s |\n" ${TAB[0]} ${TAB[2]} ${TAB[1]} ${TAB[4]} 
+done <data_tag_$VTAG.csv
+printf "|------+---------------+-----------------+-------------+-----------------|\n"
+}
+
+
+
+
+#================================================================
+# PROGRAM START
+#================================================================
+
 # Check that zenity is available
 which zenity >/dev/null
 if [ $? = 1 ]
@@ -73,7 +113,7 @@ do
 		"${items[2]}") ./pgvm_create; ./pgvm_list;;
 		"${items[3]}") ./pgvm_delete; ./pgvm_list;;
 		"${items[4]}") ./pgvm_users;;
-		"${items[5]}") ./pgvm_tags;;
+		"${items[5]}") ViewTags;;
 		*) echo "Ooops! Invalid option.";;
 	esac
 done

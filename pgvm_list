@@ -163,7 +163,7 @@ do
 		for i in ${ARR2[@]}
 		do
 			if [ "$i" = "$TAG" ]; then
-				echo "${ARR[0]};${ARR[1]};${ARR[2]};${ARR[4]}" >>data_tag_$TAG.csv
+				echo "${ARR[0]};${ARR[1]};${ARR[2]};${ARR[4]};${ARR[3]}" >>data_tag_$TAG.csv
 			fi
 		done
 	done <$OUT

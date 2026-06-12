@@ -1,5 +1,5 @@
 #!/bin/bash
-
+aa
 # nom: pgvm_view
 # Visualisation des machines d'un node
 
@@ -24,7 +24,7 @@ if [ $? != 0 ]; then
 fi
 
 clear
-echo -e "\n-Liste des $(wc -l<data_tag_$VTAG.csv) machines du tag '$VTAG':"
+echo -e "\n-Liste des $(wc -l<data_tag_$VTAG.csv) machines ayant le tag '$VTAG':"
 printf "| VM/T |      Node     |       Nom       |    VMId     |\n";
 printf "|------+---------------+-----------------+-------------|\n"
 
@@ -37,7 +37,7 @@ do
 	fi
 	printf " %-13s | %-15s | %11d |\n" ${TAB[0]} ${TAB[2]} ${TAB[1]}
 done <data_tag_$VTAG.csv
-printf "|------+--------------+------------------+-------------|\n"
+printf "|------+---------------+-----------------+-------------|\n"
 
 exit 0
 
