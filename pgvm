@@ -6,6 +6,7 @@
 # All API calls will be done on this one.
 # In case it breaks, just change to another one
 APINODE=anvers
+DEBUG=YES
 
 if [ "$1" = "" ]
 then
@@ -76,6 +77,7 @@ do
 	esac
 done
 
+rm /tmp/proxmox/* 2>/dev/null
 echo "fini!"
 
 

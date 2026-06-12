@@ -229,17 +229,18 @@ then
 
 # VM Naming holds userid
 else
-	NUM=1
+	NUMA=1
 	IFS=";";while read -a ARR
 	do
 		IDU1=${ARR[0]}
 		IFS='@'; read -ra ARR2 <<< "$IDU1"; IFS=';'
 		IDU=${ARR2[0]}
-		if [ 1 = ${#NUM} ]; then NUM="0$NUM";fi
-		VMID=${YEARDAY}${ID}${NUM}
+		NUMB=$NUMA
+		if [ 1 = ${#NUMA} ]; then NUMB="0$NUMA";fi
+		VMID=${YEARDAY}${ID}${NUMB}
 		VMNAME=${MOD}-${IDU}
 #		echo "IDU1=$IDU1 IDU=$IDU VMID=$VMID VMNAME=$VMNAME"
-		((NUM++))
+		((NUMA++))
 		CreateClone
 	done < data_group_${GROUPSEL}.csv
 fi

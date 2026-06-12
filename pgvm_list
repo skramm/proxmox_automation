@@ -90,8 +90,9 @@ function process()
 }
 
 #---------------------------------------------------------------------------
-# Get list of nodes 
-clear
+# Get list of nodes
+if [ $DEBUG = NO ]; then clear; fi
+
 #echo "-Récupération liste des nodes..."
 curl --silent -k \
 	-H "Authorization: PVEAPIToken=$PVUSER@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
