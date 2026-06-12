@@ -68,6 +68,7 @@ function process()
 		fi
 
 # comptage du nb d'occurrence pour chaque tag
+# TODO: supprimer quand on aura les csv par tag
 		if ! [ "${ARR[2]}" = "" ]
 		then
 			tags=${ARR[2]}
@@ -91,7 +92,7 @@ function process()
 
 #---------------------------------------------------------------------------
 # Get list of nodes
-if [ $DEBUG = NO ]; then clear; fi
+if [ "$DEBUG" = "NO" ]; then clear; fi
 
 #echo "-Récupération liste des nodes..."
 curl --silent -k \
@@ -146,6 +147,28 @@ do
 done
 echo "|------------+-------|"
 printf "       Total | %5d |\n" $COMPT
+
+#===========================================================
+# Generate a csv file for each tag, holding the type (Vm/T), the VMID, the name, and the node
+
+rm data_tag_* 2>/dev/null
+IFS=";";while read -a TAG
+do
+#	echo "TAG=$TAG"
+	while read -a ARR
+	do
+#		echo "ARR[3]=${ARR[3]}"
+		tags=${ARR[3]}
+		IFS=","; read -a ARR2 <<< "$tags"; IFS=";"
+		for i in ${ARR2[@]}
+		do
+			if [ "$i" = "$TAG" ]; then
+				echo "${ARR[0]};${ARR[1]};${ARR[2]};${ARR[4]}" >>data_tag_$TAG.csv
+			fi
+		done
+	done <$OUT
+done <data_tags.csv
+
 
 
 #===========================================================

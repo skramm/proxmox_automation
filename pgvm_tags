@@ -1,0 +1,44 @@
+#!/bin/bash
+
+# nom: pgvm_view
+# Visualisation des machines d'un node
+
+# ce script doit être appelé depuis le script maitre pgvm
+
+# -x pour debug
+set +x
+
+# désactive l'interprétation de '!' dans une chaine
+set +H
+
+# re-create an array holding the tag names
+declare -a TAGARR
+while read -r tagname
+do
+	TAGARR+=($tagname)
+done < data_tags.csv
+
+VTAG=$(zenity --list --text="Quel tag?" --column="Tags" "${TAGARR[@]}")
+if [ $? != 0 ]; then
+	echo "Interruption"; exit 1
+fi
+
+clear
+echo -e "\n-Liste des $(wc -l<data_tag_$VTAG.csv) machines du tag '$VTAG':"
+printf "| VM/T |      Node     |       Nom       |    VMId     |\n";
+printf "|------+---------------+-----------------+-------------|\n"
+
+IFS=";";while read -a TAB
+do
+	if [ ${TAB[3]} == 1 ]; then
+		printf "|  T   |"
+	else
+		printf "|  VM  |"
+	fi
+	printf " %-13s | %-15s | %11d |\n" ${TAB[0]} ${TAB[2]} ${TAB[1]}
+done <data_tag_$VTAG.csv
+printf "|------+--------------+------------------+-------------|\n"
+
+exit 0
+
+

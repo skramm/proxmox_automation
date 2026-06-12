@@ -56,7 +56,7 @@ echo "-connection API: fonctionnelle!"
 
 ./pgvm_list
 
-items=("Génération inventaire" "Liste VMs par Node" "Création VMs" "Suppression VMs" "Liste users")
+items=("Génération inventaire" "Liste VMs par Node" "Création VMs" "Suppression VMs" "Liste users" "Liste par tag")
 
 while item=$(zenity --height=400 --list \
 	--title="Menu principal" \
@@ -73,6 +73,7 @@ do
 		"${items[2]}") ./pgvm_create; ./pgvm_list;;
 		"${items[3]}") ./pgvm_delete; ./pgvm_list;;
 		"${items[4]}") ./pgvm_users;;
+		"${items[5]}") ./pgvm_tags;;
 		*) echo "Ooops! Invalid option.";;
 	esac
 done
