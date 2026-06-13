@@ -183,6 +183,46 @@ printf "|----------------+------------------------------------------|\n"
 }
 
 
+
+#================================================================
+function ViewVM()
+{
+# re-create an array holding the nodes names
+declare -a NODEARR
+while read -r nodename
+do
+	NODEARR+=($nodename)
+done < data_nodes.csv
+
+VNODE=$(zenity --list --text="Quel node?" --column="node" "${NODEARR[@]}")
+if [ $? != 0 ]; then
+	echo "Interruption"; exit 1
+fi
+
+clear
+echo -e "\n-Liste des $(wc -l<data_out_$VNODE.csv) machines du node '$VNODE':"
+printf "| VM/T |    |        Nom       |    VMId    |     Tags      |\n";
+printf "|------+----+------------------+------------+---------------|\n"
+
+IFS=";";while read -a TAB
+do
+	if [ ${TAB[3]} == 1 ]; then
+		printf "|  T   | - "
+	else
+		printf "|  VM  | "
+
+		if [ ${TAB[4]} = "stopped" ]; then
+			echo -n "🔴"
+		else
+			echo -n "🟢"
+		fi
+	fi
+	printf " | %-16s | %10d | %13s |\n" ${TAB[1]} ${TAB[0]} ${TAB[2]}
+done <data_out_$VNODE.csv
+printf "|------+----+------------------+------------+---------------|\n"
+}
+
+
 #================================================================
 # PROGRAM START
 #================================================================
@@ -226,7 +266,7 @@ do
 
 	case "$item" in
 		"${items[0]}") ./pgvm_list;;
-		"${items[1]}") ./pgvm_view;;
+		"${items[1]}") ViewVM;;
 		"${items[2]}") ./pgvm_create; ./pgvm_list;;
 		"${items[3]}") DeleteVm; ./pgvm_list;;
 		"${items[4]}") ViewGroups;;
