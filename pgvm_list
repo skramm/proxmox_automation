@@ -141,15 +141,16 @@ echo "|------------+---------------+-----------------+---------|"
 sort /tmp/proxmox/tags.csv >/tmp/proxmox/tags1.csv
 uniq /tmp/proxmox/tags1.csv >data_tags.csv
 
-echo -e "\n-Tags: $(wc -l <data_tags.csv)"
-echo -e "|    Tags    | VM+T. |\n|------------+-------|"
+printf "\n|   %2d Tags  | #VM+T. |\n|------------+--------|\n" $(wc -l <data_tags.csv)
+NUM=1
 for i in "${!TAGARR[@]}"
 do
-	printf "| %10s | %5d |\n" $i ${TAGARR[$i]}
+	printf "| %10s | %6d |\n" $i ${TAGARR[$i]}
 	((COMPT+=${TAGARR[$i]}))
+	((NUM++))
 done
-echo "|------------+-------|"
-printf "       Total | %5d |\n" $COMPT
+echo "|------------+--------|"
+printf "       Total | %6d |\n" $COMPT
 
 #===========================================================
 # Generate a csv file for each tag, holding the type (Vm/T), the VMID, the name, and the node
@@ -211,7 +212,8 @@ done <data_users.csv
 sort /tmp/proxmox/groups1.csv >/tmp/proxmox/groups2.csv
 uniq /tmp/proxmox/groups2.csv >data_groups.csv
 
-echo -e "\n|         Group           | #Users |\n|-------------------------+--------|"
+echo -e "\n-Nb d'utilisateurs: $(wc -l <data_users.csv), répartis dans $(wc -l <data_groups.csv) groupes"
+echo -e "|         Group           | #Users |\n|-------------------------+--------|"
 COMPT=0
 IFS=";";while read groupname
 do
