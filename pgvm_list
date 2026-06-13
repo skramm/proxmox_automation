@@ -52,20 +52,22 @@ function process()
 	IFS=";";while read line;
 	do
 		echo "$1;${line}" >> $OUT
+		
  	done < data_node_$1.csv
 
 	# extraction des template de chaque node
-	NBT=0
-	rm template_$1.csv 2>/dev/null
+
+#	NBT=0
+#	rm template_$1.csv 2>/dev/null
 	IFS=";";while read -a ARR
 	do
 #		echo "0:${ARR[0]} - 1:${ARR[1]} - 2:${ARR[2]} - 3:${ARR[3]}"
-		if [ ${ARR[3]} = 1 ]
-		then
-			NBT=$((NBT+1))
-			echo "${ARR[1]};${ARR[2]};${ARR[0]}" >> data_template_$1.csv
-			echo "$1;${ARR[1]};${ARR[2]};${ARR[0]}" >> data_template_all.csv
-		fi
+#		if [ ${ARR[3]} = 1 ]
+#		then
+#			NBT=$((NBT+1))
+#			echo "${ARR[1]};${ARR[2]};${ARR[0]}" >> data_template_$1.csv
+#			echo "$1;${ARR[1]};${ARR[2]};${ARR[0]}" >> data_template_ALL.csv
+#		fi
 
 # comptage du nb d'occurrence pour chaque tag
 # TODO: supprimer quand on aura les csv par tag
@@ -81,13 +83,6 @@ function process()
 			done
 		fi
 	done < data_node_$1.csv
-
-#	NBTOT=$(wc -l <data_out_$1.csv)
-#	((NBVM=NBTOT-NBT))
-#	printf "| %10s | %3d | %7d | %5d |\n" $1 $NBVM $NBT $NBTOT
-#	((TOT1+=NBVM))
-#	((TOT2+=NBT))
-#	((TOT3+=NBTOT))
 }
 
 #---------------------------------------------------------------------------
@@ -112,7 +107,7 @@ rm /tmp/proxmox/tags.csv 2>/dev/null
 declare -A TAGARR
 
 
-# Main API loop, iterate on all nodes and collect data
+# Main API loop, iterate on all nodes and collect all the nodes data
 while read -r nodename
 do
 	process $nodename
@@ -129,6 +124,7 @@ TOTALL=0
 
 rm data_template_* 2>/dev/null
 
+# Generate data file for templates
 NBT=0
 while read -r NODE
 do
@@ -138,13 +134,13 @@ do
 		if [ ${ARR[3]} = 1 ]; then
 			((NBT++))
 			echo "${ARR[1]};${ARR[2]};${ARR[0]}" >> data_template_$NODE.csv
-			echo "$1;${ARR[1]};${ARR[2]};${ARR[0]}" >> data_template_all.csv
+			echo "$NODE;${ARR[1]};${ARR[2]};${ARR[0]}" >> data_template_ALL.csv
 		fi
 	done < data_node_$NODE.csv
 
 	NBTOT=$(wc -l <data_node_$NODE.csv)
 	((NBVM=NBTOT-NBT))
-	printf "| %10s | %3d | %7d | %5d |\n" $1 $NBVM $NBT $NBTOT
+	printf "| %10s | %3d | %7d | %5d |\n" $NODE $NBVM $NBT $NBTOT
 	((TOTVM+=NBVM))
 	((TOTT+=NBT))
 	((TOTALL+=NBTOT))
@@ -157,14 +153,14 @@ printf "      Totaux | %3d | %7d | %5d |\n" $TOTVM $TOTT $TOTALL
 
 
 
-echo -e "\n-Liste des $(wc -l<data_template_all.csv) templates:"
-printf "| %10s | %13s | %15s | %7s |\n" Node Name Tags VMid
-echo "|------------+---------------+-----------------+---------|"
+echo -e "\n-Liste des $(wc -l<data_template_ALL.csv) templates:"
+printf "| %12s | %13s | %15s | %7s |\n" Node Name Tags VMid
+echo "|--------------+---------------+-----------------+---------|"
 IFS=";";while read -a ARR
 do
-	printf "| %10s | %13s | %15s | %7s |\n" ${ARR[0]} ${ARR[1]} ${ARR[2]} ${ARR[3]}
-done < data_template_all.csv
-echo "|------------+---------------+-----------------+---------|"
+	printf "| %12s | %13s | %15s | %7s |\n" ${ARR[0]} ${ARR[1]} ${ARR[2]} ${ARR[3]}
+done < data_template_ALL.csv
+echo "|--------------+---------------+-----------------+---------|"
 
 sort /tmp/proxmox/tags.csv >/tmp/proxmox/tags1.csv
 uniq /tmp/proxmox/tags1.csv >data_tags.csv

@@ -222,7 +222,8 @@ done <data_node_$VNODE.csv
 printf "|------+----+------------------+------------+---------------|\n"
 NBT=$(wc -l <data_template_$VNODE.csv)
 NBTOT=$(wc -l <data_node_$VNODE.csv)
-echo "Bilan: $NBT templates et ${((NBTOT-NBT))} VM, dont $NBON en fonctionnement"
+((NBVM=NBTOT-NBT))
+echo "Bilan: $NBT templates et $NBVM VM, dont $NBON en fonctionnement"
 }
 
 
@@ -256,7 +257,7 @@ echo "-connection API: fonctionnelle!"
 
 ./pgvm_list
 
-items=("Génération inventaire" "Liste VMs par Node" "Création VMs" "Suppression VMs" "Liste des users par groupe" "Liste VM par tag")
+items=("Affichage inventaire" "Liste VMs par Node" "Création VMs" "Suppression VMs" "Liste des users par groupe" "Liste VM par tag")
 
 while item=$(zenity --height=400 --width=300 --list \
 	--title="Menu principal" \

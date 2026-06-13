@@ -12,7 +12,7 @@
 - `zenity`
 - `jq`
 
-(devrait être disponible par défaut dans votre distrib)
+(devraient être disponible par défaut dans votre distrib)
 
 ## TODO:
 
@@ -20,7 +20,7 @@
 voir
 https://pve.proxmox.com/pve-docs/api-viewer/#/access/acl
 
-- bug: lors de la création, le template se voit affecté des tags?
+- bug: lors de la création par clonage, le template se voit affecté des tags?
 
 ## Introduction
 
@@ -28,13 +28,13 @@ Nous disposons dans le département d'un hyperviseur "ProxMox", afin que les ét
 
 L'interface web native fournie est assez complète mais dans un cadre pédagogique, nous avons des besoins spécifiques qu'elle ne remplit pas.
 
-Pour des TP, nous avons besoin de pouvoir créer un ensemble de VM toutes identiques, typiquement une par étudiant, et basées sur un même "template".
+Pour des TP, nous avons besoin de pouvoir créer un ensemble de VM toutes identiques, typiquement une ou deux par étudiant, et basées sur un même "template".
 Avec l'interface web native, ceci est laborieux: ça implique de cloner les machines une par une, et leur assigner ensuite les permissions ("rôles).
 De plus, les VM à créer peuvent être différentes selon les TP, et certains TP peuvent nécessiter aussi de créer 2, voire 3 VM.
 
 Il n'est donc pas envisageable d'utiliser pour cela l'interface web native.
 
-D'autres solutions auraient pu être utilisées (probablement des outils comme Terraform?), l'approche utilisée ici a consisté à utiliser l'API HTTP directement, via curl, et depuis un script bash.
+D'autres solutions auraient pu être utilisées (probablement des outils comme Terraform?), l'approche utilisée ici a consisté à utiliser l'API HTTP directement, via `curl` depuis un script bash.
 
 
 **Objectifs de ce programme**:  
