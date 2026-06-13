@@ -62,7 +62,7 @@ do
 					echo "node ${TAB[0]}: suppression machine ${TAB[2]}, id=${TAB[1]}"
 					response=$(curl --insecure --silent -X DELETE \
 						-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
-						"https://${APINODE}.univ-rouen.fr:8006/api2/json/nodes/${TAB[0]}/qemu/${TAB[1]}?node=${TAB[0]}&vmid=${TAB[1]}")
+						"https://${APINODE}.${DOMAIN}:${PORT}/api2/json/nodes/${TAB[0]}/qemu/${TAB[1]}?node=${TAB[0]}&vmid=${TAB[1]}")
 					err=$?
 
 					if [ $err != 0 ]; then

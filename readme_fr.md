@@ -1,30 +1,45 @@
 # Documentation du projet
 
-Auteur: S. Kramm, IUT Rouen
-Date: 2026/06
+- Auteur: S. Kramm, IUT RT Rouen
+- Date: 2026/06
+- Statut: alpha
+- Licence: ???
 
-!!! WIP !!!
 
 ## Outils nécessaires
-- bash
-- curl
-- zenity
+- `bash`
+- `curl`
+- `zenity`
+- `jq`
 
 (devrait être disponible par défaut dans votre distrib)
 
 ## TODO:
 
-- gestion des permissions:  
+- gestion des permissions/rôles:  
 voir
 https://pve.proxmox.com/pve-docs/api-viewer/#/access/acl
 
+- bug: lors de la création, le template se voit affecté des tags?
+
 ## Introduction
 
-Objectif de ces scripts:
-avoir des outils permettant de lister, créer/supprimer, démarrer/éteindre, etc.
-un ensemble de VM pour des TPs, et s'appuyant sur l'API de Proxmox.
+Nous disposons dans le département d'un hyperviseur "ProxMox", afin que les étudiants puisse disposer de VM pour des TP.
 
-Note: inspiré par la présentation de ?? à l'ACD St Malo, juin 2026
+L'interface web native fournie est assez complète mais dans un cadre pédagogique, nous avons des besoins spécifiques qu'elle ne remplit pas.
+
+Pour des TP, nous avons besoin de pouvoir créer un ensemble de VM toutes identiques, typiquement une par étudiant, et basées sur un même "template".
+Avec l'interface web native, ceci est laborieux: ça implique de cloner les machines une par une, et leur assigner ensuite les permissions ("rôles).
+De plus, les VM à créer peuvent être différentes selon les TP, et certains TP peuvent nécessiter aussi de créer 2, voire 3 VM.
+
+Il n'est donc pas envisageable d'utiliser pour cela l'interface web native.
+
+D'autres solutions auraient pu être utilisées (probablement des outils comme Terraform?), l'approche utilisée ici a consisté à utiliser l'API HTTP directement, via curl, et depuis un script bash.
+
+
+**Objectifs de ce programme**:  
+avoir un outil permettant de lister, créer/supprimer, démarrer/éteindre, etc.
+un ensemble de VM pour des TPs, en spécifiant les noms des machines et les tags associés.
 
 Pour l'utilisation générale de Proxmox dans le cadre du dept RT de l'IUT de Rouen,
 [voir ici](https://gitlab.univ-rouen.fr/litis-kramm/RT_docs/-/blob/main/proxmox/tuto_proxmox.md)
@@ -48,10 +63,12 @@ TOK_NAME=XXX
 TOK_VALUE=YYY
 REALM=UR
 PVUSER=ZZZZ
+DOMAIN=mydomain.org
+PORT=1234
 ```
-Et remplacer `XXX` et `YYY` par nom et valeur du token généré, et ZZZZ par votre id "5+3" URN.
+Remplacer `XXX` et `YYY` par nom et valeur du token généré, et ZZZZ par votre id "5+3" URN, `mydomain.org` par votre domaine, et donner le bon numéro de port.
 
-Dans ces scripts, ce fichier sera lu (avec `source`) de façon à récupérer les informations d'identification.
+Ce fichier sera lu (avec `source`) pour récupérer les informations d'identification.
 
 
 ### Suppression d'un ensemble de VM

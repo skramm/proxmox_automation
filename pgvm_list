@@ -25,7 +25,7 @@ function process()
 #	echo "process $1"
 	curl --insecure --silent -X GET \
 		-H "Authorization: PVEAPIToken=$PVUSER@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
-		https://${APINODE}.univ-rouen.fr:8006/api2/json/nodes/$1/qemu | jq -r '.data[]' >/tmp/proxmox/out_$1.json 2>>$CURLLOG
+		https://${APINODE}.${DOMAIN}:${PORT}/api2/json/nodes/$1/qemu | jq -r '.data[]' >/tmp/proxmox/out_$1.json 2>>$CURLLOG
 	err=$?
 	if ! [ $err = 0 ]
 	then
@@ -97,7 +97,7 @@ if [ "$DEBUG" = "NO" ]; then clear; fi
 #echo "-Récupération liste des nodes..."
 curl --silent -k \
 	-H "Authorization: PVEAPIToken=$PVUSER@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
-	https://${APINODE}.univ-rouen.fr:8006/api2/json/nodes|jq | jq -r '.data[] | .node' >data_nodes.csv 2>>$CURLLOG
+	https://${APINODE}.${DOMAIN}:${PORT}/api2/json/nodes|jq | jq -r '.data[] | .node' >data_nodes.csv 2>>$CURLLOG
 err=$?
 if ! [ $err = 0 ];
 then
@@ -176,7 +176,7 @@ done <data_tags.csv
 
 curl --insecure --silent -X GET \
 	-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
-	"https://${APINODE}.univ-rouen.fr:8006/api2/json/access/users?full=1" | jq '.data[]' >/tmp/proxmox/users.json
+	"https://${APINODE}.${DOMAIN}:${PORT}/api2/json/access/users?full=1" | jq '.data[]' >/tmp/proxmox/users.json
 
 err=$?
 if [ $err != 0 ]; then
