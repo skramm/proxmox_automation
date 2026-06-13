@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # name: pgvm ("Proxmox Gestion VM")
 # S. Kramm, URN, 2026
@@ -226,18 +226,43 @@ NBTOT=$(wc -l <data_node_$VNODE.csv)
 echo "Bilan: $NBT templates et $NBVM VM, dont $NBON en fonctionnement"
 }
 
+#================================================================
+function ToolCheck()
+{
+	which $1 >/dev/null
+	if ! [ $? = 0 ]; then
+		echo "Error: program '$1' not available, please install"
+		exit 1
+	fi
+}
+#================================================================
+function VarCheck()
+{
+	if [ "$1" = "" ]; then
+		echo "Error: variable '$1' is empty, please check manual and file '$TOKEN_FILE'"
+		exit 1
+	fi
+	
+}
+
 
 #================================================================
 # PROGRAM START
 #================================================================
 
-# Check that zenity is available
-which zenity >/dev/null
-if [ $? = 1 ]
-then
-	echo "Error: zenity not available, please install"
-	exit 1
-fi
+# Check that required tools are available
+ToolCheck curl
+ToolCheck jq
+ToolCheck zenity
+
+# Check that these variables are not empty
+VarCheck $TOK_VALUE
+VarCheck $TOK_NAME
+VarCheck $REALM
+VarCheck $CURLLOG
+VarCheck $APINODE
+VarCheck $DOMAIN
+VarCheck $PORT
 
 TODAY=$(date '+%Y%m%d_%H%M%S')
 CURLLOG=/tmp/proxmox/curl_$TODAY.log
