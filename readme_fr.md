@@ -41,9 +41,7 @@ D'autres solutions auraient pu être utilisées (probablement des outils comme T
 avoir un outil permettant de lister, créer/supprimer, démarrer/éteindre, etc.
 un ensemble de VM pour des TPs, en spécifiant les noms des machines et les tags associés.
 
-Pour l'utilisation générale de Proxmox dans le cadre du dept RT de l'IUT de Rouen,
-[voir ici](https://gitlab.univ-rouen.fr/litis-kramm/RT_docs/-/blob/main/proxmox/tuto_proxmox.md)
-
+Pour les collègues de l'URN, une doc générale de type "tuto" sur l'utilisation de Proxmox dans le cadre du dept RT de l'IUT de Rouen est [accessible ici](https://gitlab.univ-rouen.fr/litis-kramm/RT_docs/-/blob/main/proxmox/tuto_proxmox.md)  
 (**note**: Implique d'avoir un compte URN et l'accès au gitlab via le CAS URN)
 
 - Référence API: https://pve.proxmox.com/pve-docs/api-viewer/
@@ -54,7 +52,6 @@ Pour l'utilisation générale de Proxmox dans le cadre du dept RT de l'IUT de Ro
 ### Connection à l'API
 
 La connection à l'API implique d'avoir préalablement généré un "token API" via l'interface graphique.
-(voir section `3.3 - Utilisation de l'API` dans la doc ci-dessus).
 
 Une fois ce token obtenu, il faut le placer dans un fichier qui devra contenir les définitions suivantes:
 
@@ -63,12 +60,21 @@ TOK_NAME=XXX
 TOK_VALUE=YYY
 REALM=UR
 PVUSER=ZZZZ
+APINODE=brandon
 DOMAIN=mydomain.org
 PORT=1234
 ```
-Remplacer `XXX` et `YYY` par nom et valeur du token généré, et ZZZZ par votre id "5+3" URN, `mydomain.org` par votre domaine, et donner le bon numéro de port.
+Remplacer `XXX` et `YYY` par nom et valeur du token généré,
+`mydomain.org` par votre domaine,
+ZZZZ par votre identifiant sur le domaine, 
+et donner le bon numéro de port.
 
-Ce fichier sera lu (avec `source`) pour récupérer les informations d'identification.
+L'API n'est accessible que via l'une des machines du cluster, il faut donc spécifier le nom de celle qui sera utilisée dans la variable `APINODE`.
+Si ce node tombe, il suffit d'un prendre un autre.
+Mais quel que soit le node choisi pour la connexion, l'ensemble du cluster est manipulable via l'API.
+
+Le lancement du programme se fait en donnant le nom (et chemin éventuel) de ce fichier.
+Ce fichier sera ensuite lu (avec `source`) pour récupérer les informations de connexion et d'identification.
 
 
 ### Suppression d'un ensemble de VM
@@ -101,6 +107,24 @@ Avec:
 ### Tags
 
 ...
+
+## FAQ
+
+- Q: Pourquoi ne pas avoir construit ceci sous la forme d'une commande CLI?  
+R: L'idée était de faire quelque chose de facile et intuitif de prise en main, mais sans imposer de "framework" lourd, donc l'utilisation de zenity, assez courant dans les distrib contemporaines, semblait une bonne idée.
+Mais il y avait des alternatives, notamment [dialog](https://linux.die.net/man/1/dialog).
+
+Je suis parti sur `zenity`, mais il y a des limitations:
+pas de "checkbox" notamment, contrairement à `dialog`.
+
+
+- Q: Est-ce que ceci est utilisable sous Windows avec WSL?  
+R: Aucune idée, mais je suis preneur de retours!
+
+- Q: Pourquoi des affichages en français?  
+R: L'idée initiale était de faciliter l'usage en interne (IUT/URN), mais à terme j'envisage une internationalisation
+(mais bon, c'est en bash, donc faut pas trop complexifier non plus...)
+
 
 
 

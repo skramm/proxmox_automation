@@ -2,10 +2,7 @@
 
 # name: pgvm ("Proxmox Gestion VM")
 # S. Kramm, URN, 2026
-
-# All API calls will be done on this one.
-# In case it breaks, just change to another one
-APINODE=anvers
+# https://github.com/skramm/proxmox_automation
 
 if [ "$1" = "" ]
 then
@@ -14,7 +11,7 @@ then
 fi
 TOKEN_FILE=$1
 
-# vérification de l'accès au fichier
+# Check that file holding credentials is there
 if ! [ -f $TOKEN_FILE ];
 then
 	echo "Erreur, fichier '$TOKEN_FILE' introuvable!"
@@ -22,6 +19,7 @@ then
 fi
 source $TOKEN_FILE
 
+# TODO: this will be useless once all the code will be in a single file
 export PVUSER
 export TOK_VALUE
 export TOK_NAME
@@ -30,6 +28,84 @@ export CURLLOG
 export APINODE
 export DOMAIN
 export PORT
+
+
+#================================================================
+function DeleteVm()
+{
+if ! [ -f data_tags.csv ]
+then
+	echo "Erreur, fichier 'data_tags.csv' inaccessible"
+	exit 1
+fi
+
+declare -a TAGARR
+IFS=";";while read TAG
+do
+	TAGARR+=($TAG)
+done <data_tags.csv
+#echo "TAGARR=${TAGARR[@]}"	
+
+TAGDEL=$(zenity --list --text="Quel machines ayant le tag ci-dessous souhaitez-vous détruire?" --column="tags" ${TAGARR[@]})
+if [ $? != 0 ]; then
+	echo "Interruption"; exit 1
+fi
+
+# count VM only (not templates, as these will not be deleted)
+#echo "TAGDEL=$TAGDEL"
+COUNT=0
+IFS=";";while read -a ARR
+do
+	if [ ${ARR[3]} = 0 ]; ((COUNT++)); done
+done < data_tag_${TAGDEL}.csv
+
+START=$(zenity --question --text \
+	"Ok pour effacer les ${COUNT} VMs associées au tag $TAGDEL?")
+
+if [ $? != 0 ]; then
+	echo "Interruption"; exit 1
+fi
+echo "START=$START"
+#exit 1
+
+#-------------------------
+# Delete VMs
+# TODO: pas plus simple de lire dans le fichier tags_XXXX.csv ???
+
+set +x
+COMPT=0
+IFS=";";while read -a TAB
+do
+	if ! [ "${TAB[3]}" = "" ]; then
+		IFS=","; read -r -a TAGS <<< "${TAB[3]}"; IFS=";"
+		for ((i=0; i<${#TAGS[@]}; i++))
+		do
+			tag=${TAGS[$i]}
+#				echo "node ${TAB[0]}: machine ${TAB[2]}, tag=$tag"
+			if [ $tag = $TAGDEL ]; then
+				if [ "${TAB[4]}" = "1" ]; then
+					echo "node ${TAB[0]}: machine ${TAB[2]}, id=${TAB[1]} est un template, pas de suppression"
+				else
+					echo "node ${TAB[0]}: suppression machine ${TAB[2]}, id=${TAB[1]}"
+					response=$(curl --insecure --silent -X DELETE \
+						-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
+						"https://${APINODE}.${DOMAIN}:${PORT}/api2/json/nodes/${TAB[0]}/qemu/${TAB[1]}?node=${TAB[0]}&vmid=${TAB[1]}")
+					err=$?
+
+					if [ $err != 0 ]; then
+						echo "Error: failure of delete operation, err=$err, response='$response'";
+						exit 1
+					fi
+					((COMPT++))
+				fi
+			fi
+		done
+	fi
+done <data_out_all.csv
+
+echo "-$COMPT VM supprimées"
+}
+
 
 #================================================================
 function ViewTags()
@@ -121,7 +197,7 @@ fi
 TODAY=$(date '+%Y%m%d_%H%M%S')
 CURLLOG=/tmp/proxmox/curl_$TODAY.log
 
-# temporary files are stored over there
+# All temporary files are stored over there
 mkdir -p /tmp/proxmox
 
 # TODO: bug, en cas de non réponse, pas de message d'erreur !!
@@ -151,7 +227,7 @@ do
 		"${items[0]}") ./pgvm_list;;
 		"${items[1]}") ./pgvm_view;;
 		"${items[2]}") ./pgvm_create; ./pgvm_list;;
-		"${items[3]}") ./pgvm_delete; ./pgvm_list;;
+		"${items[3]}") DeleteVm; ./pgvm_list;;
 		"${items[4]}") ViewGroups;;
 		"${items[5]}") ViewTags;;
 		*) echo "Ooops! Invalid option.";;

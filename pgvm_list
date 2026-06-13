@@ -25,7 +25,7 @@ function process()
 	if [ "$DEBUG" = "Y" ];then echo "process $1"; fi
 	curl --insecure --silent -X GET \
 		-H "Authorization: PVEAPIToken=$PVUSER@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
-		https://${APINODE}.${DOMAIN}:${PORT}/api2/json/nodes/$1/qemu | jq -r '.data[]' >/tmp/proxmox/out_$1.json 2>>$CURLLOG
+		https://${APINODE}.${DOMAIN}:${PORT}/api2/json/nodes/$1/qemu?full=true | jq -r '.data[]' >/tmp/proxmox/out_$1.json 2>>$CURLLOG)
 	err=$?
 	if ! [ $err = 0 ]
 	then
@@ -109,7 +109,7 @@ fi
 rm /tmp/proxmox/tags.csv 2>/dev/null
 rm data_template_* 2>/dev/null
 
-# associative array used to count tags
+# Associative array used to count tags
 declare -A TAGARR
 
 echo "|    Node    | #VM | #Templ. |  Tot  |"
@@ -119,10 +119,12 @@ TOT1=0
 TOT2=0
 TOT3=0
 
+# Main loop, iterate on all nodes
 while read -r nodename
 do
 	process $nodename
 done < data_nodes.csv
+
 
 echo "|------------+-----+---------+-------|"
 printf "      Totaux | %3d | %7d | %5d |\n" $TOT1 $TOT2 $TOT3

@@ -23,18 +23,23 @@ IFS=";";while read TAG
 do
 	TAGARR+=($TAG)
 done <data_tags.csv
-echo "TAGARR=${TAGARR[@]}"	
-
+#echo "TAGARR=${TAGARR[@]}"	
 
 TAGDEL=$(zenity --list --text="Quel machines ayant le tag ci-dessous souhaitez-vous détruire?" --column="tags" ${TAGARR[@]})
 if [ $? != 0 ]; then
 	echo "Interruption"; exit 1
 fi
 
-echo "TAGDEL=$TAGDEL"
+# count VM only (not templates, are these will not be deleted)
+#echo "TAGDEL=$TAGDEL"
+COUNT=0
+IFS=";";while read -a ARR
+do
+	if [ ${ARR[3]} = 0 ]; ((COUNT++)); done
+done < data_tag_${TAGDEL}.csv
 
 START=$(zenity --question --text \
-	"Ok pour effacer toutes les VM associées au tag $TAGDEL?")
+	"Ok pour effacer les ${COUNT} VMs associées au tag $TAGDEL?")
 
 if [ $? != 0 ]; then
 	echo "Interruption"; exit 1
@@ -44,6 +49,7 @@ echo "START=$START"
 
 #-------------------------
 # Suppression des machines
+# TODO: pas plus simple de lire dans le fichier tags_XXXX.csv ???
 
 set +x
 COMPT=0
