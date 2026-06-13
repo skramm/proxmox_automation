@@ -255,6 +255,7 @@ fi
 #echo "response=$response"
 echo "-connection API: fonctionnelle!"
 
+
 ./pgvm_list
 
 items=("Affichage inventaire" "Liste VMs par Node" "Création VMs" "Suppression VMs" "Liste des users par groupe" "Liste VM par tag")
