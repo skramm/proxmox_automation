@@ -22,7 +22,7 @@ CURLLOG=/tmp/proxmox/curl_$TODAY.log
 # This function is called for each node of the cluster
 function process()
 {
-#	echo "process $1"
+	if [ "$DEBUG" = "Y" ];then echo "process $1"; fi
 	curl --insecure --silent -X GET \
 		-H "Authorization: PVEAPIToken=$PVUSER@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
 		https://${APINODE}.${DOMAIN}:${PORT}/api2/json/nodes/$1/qemu | jq -r '.data[]' >/tmp/proxmox/out_$1.json 2>>$CURLLOG
@@ -91,10 +91,11 @@ function process()
 }
 
 #---------------------------------------------------------------------------
+# START
 # Get list of nodes
-if [ "$DEBUG" = "NO" ]; then clear; fi
+if [ "$DEBUG" = "N" ]; then clear; fi
 
-#echo "-Récupération liste des nodes..."
+# Fetch list of nodes
 curl --silent -k \
 	-H "Authorization: PVEAPIToken=$PVUSER@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
 	https://${APINODE}.${DOMAIN}:${PORT}/api2/json/nodes|jq | jq -r '.data[] | .node' >data_nodes.csv 2>>$CURLLOG

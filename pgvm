@@ -6,7 +6,6 @@
 # All API calls will be done on this one.
 # In case it breaks, just change to another one
 APINODE=anvers
-DEBUG=YES
 
 if [ "$1" = "" ]
 then
@@ -29,7 +28,8 @@ export TOK_NAME
 export REALM
 export CURLLOG
 export APINODE
-
+export DOMAIN
+export PORT
 
 #================================================================
 function ViewTags()
@@ -46,7 +46,7 @@ if [ $? != 0 ]; then
 	echo "Interruption"; exit 1
 fi
 
-clear
+if [ "$DEBUG" = "N" ]; then clear; fi
 echo -e "\n-Liste des $(wc -l<data_tag_$VTAG.csv) machines ayant le tag '$VTAG':"
 printf "| VM/T |      Node     |       Nom       |    VMId     |      Tags       |\n";
 printf "|------+---------------+-----------------+-------------+-----------------|\n"
@@ -64,6 +64,46 @@ printf "|------+---------------+-----------------+-------------+----------------
 }
 
 
+#================================================================
+function ViewGroups()
+{
+# create an array holding the group names, just for the zenity call below
+declare -a GROUPARR
+while read -r group
+do
+	GROUPARR+=($group)
+done < data_groups.csv
+
+GROUPARR+=("(Sans groupe)")
+
+GROUP=$(zenity --list --height=300 --text="Quel groupe?" --column="groupes" "${GROUPARR[@]}")
+if [ $? != 0 ]; then
+	echo "Interruption"; exit 1
+fi
+
+#echo "GROUP=$GROUP"
+if [ "$GROUP" = "(Sans groupe)" ]; then
+	GROUPFILE=data_group_NOGROUP.csv
+else
+	GROUPFILE=data_group_$GROUP.csv
+fi
+
+if [ "$DEBUG" = "N" ]; then clear; fi
+GROUPSIZE=$(wc -l <$GROUPFILE)
+echo "-Groupe '$GROUP': $GROUPSIZE utilisateurs"
+
+printf "|       Id       |                   email                  |\n";
+printf "|----------------+------------------------------------------|\n"
+
+IFS=";";while read -a TAB
+do
+#	if [ "$GROUP" = "${TAB[1]}" ];
+#	then
+		printf "| %14s | %-40s |\n" ${TAB[0]} ${TAB[1]}
+#	fi
+done <$GROUPFILE
+printf "|----------------+------------------------------------------|\n"
+}
 
 
 #================================================================
@@ -112,7 +152,7 @@ do
 		"${items[1]}") ./pgvm_view;;
 		"${items[2]}") ./pgvm_create; ./pgvm_list;;
 		"${items[3]}") ./pgvm_delete; ./pgvm_list;;
-		"${items[4]}") ./pgvm_users;;
+		"${items[4]}") ViewGroups;;
 		"${items[5]}") ViewTags;;
 		*) echo "Ooops! Invalid option.";;
 	esac
