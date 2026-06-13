@@ -108,6 +108,12 @@ Avec:
 
 Via l'API, un ensemble de requetes va récupérer en JSON les détails sur toutes les machines de chaque node et les convertir en CSV.
 
+Dans l'ordre:
+- Après avoir testé la réponse de l'API, on commence par un appel sur le "endpoint" `api2/json/nodes` qui renvoie la liste des nodes du cluster.
+- On peut ensuite itérer sur chacun des nodes et via le "endpoint"
+`api2/json/nodes/$1/qemu` on obtient tous les détails de chaque VM et template dans un fichier `data_node_NODENAME.csv`.
+- On parse ce fichier pour générer un fichier `data_template_NODENAME.csv`, contenant la liste des templates de ce node.
+
 
 ## FAQ
 

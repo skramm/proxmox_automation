@@ -101,7 +101,7 @@ do
 			fi
 		done
 	fi
-done <data_out_all.csv
+done <data_node_ALL.csv
 
 echo "-$COMPT VM supprimées, appuyer sur une touche"
 read
@@ -183,7 +183,6 @@ printf "|----------------+------------------------------------------|\n"
 }
 
 
-
 #================================================================
 function ViewVM()
 {
@@ -199,11 +198,11 @@ if [ $? != 0 ]; then
 	echo "Interruption"; exit 1
 fi
 
-clear
-echo -e "\n-Liste des $(wc -l<data_out_$VNODE.csv) machines du node '$VNODE':"
+if ! [ "$DEBUG" = "N" ]; then clear; fi
+echo -e "\n-Liste des $(wc -l<data_node_$VNODE.csv) machines du node '$VNODE':"
 printf "| VM/T |    |        Nom       |    VMId    |     Tags      |\n";
 printf "|------+----+------------------+------------+---------------|\n"
-
+NBON=0
 IFS=";";while read -a TAB
 do
 	if [ ${TAB[3]} == 1 ]; then
@@ -215,11 +214,15 @@ do
 			echo -n "🔴"
 		else
 			echo -n "🟢"
+			((NBON++))
 		fi
 	fi
 	printf " | %-16s | %10d | %13s |\n" ${TAB[1]} ${TAB[0]} ${TAB[2]}
-done <data_out_$VNODE.csv
+done <data_node_$VNODE.csv
 printf "|------+----+------------------+------------+---------------|\n"
+NBT=$(wc -l <data_template_$VNODE.csv)
+NBTOT=$(wc -l <data_node_$VNODE.csv)
+echo "Bilan: $NBT templates et ${((NBTOT-NBT))} VM, dont $NBON en fonctionnement"
 }
 
 
