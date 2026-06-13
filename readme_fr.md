@@ -104,9 +104,10 @@ Avec:
 - `NN`: un identifiant de la machine, lors de la création d'un ensemble de VM (01 à 99)
 
 
-### Tags
+### Détails technique
 
-...
+Via l'API, un ensemble de requetes va récupérer en JSON les détails sur toutes les machines de chaque node et les convertir en CSV.
+
 
 ## FAQ
 

@@ -22,10 +22,10 @@ CURLLOG=/tmp/proxmox/curl_$TODAY.log
 # This function is called for each node of the cluster
 function process()
 {
-	if [ "$DEBUG" = "Y" ];then echo "process $1"; fi
+	if [ "$DEBUG" = "Y" ];then echo "process node $1"; fi
 	curl --insecure --silent -X GET \
 		-H "Authorization: PVEAPIToken=$PVUSER@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
-		https://${APINODE}.${DOMAIN}:${PORT}/api2/json/nodes/$1/qemu?full=true | jq -r '.data[]' >/tmp/proxmox/out_$1.json 2>>$CURLLOG)
+		https://${APINODE}.${DOMAIN}:${PORT}/api2/json/nodes/$1/qemu?full=1 | jq -r '.data[]' >/tmp/proxmox/out_$1.json 2>>$CURLLOG
 	err=$?
 	if ! [ $err = 0 ]
 	then
@@ -34,7 +34,7 @@ function process()
 	fi
 # we use the '_' character to separate fields because in the json file, multiple tags are separated with ';'
 # (and '_' is not allowed in the VM name field)
-	jq -r '(.vmid|tostring) + "_" + .name + "_" + .tags + "_" + (.template|tostring)' < /tmp/proxmox/out_$1.json >/tmp/proxmox/out_$1.csv
+	jq -r '(.vmid|tostring) + "_" + .name + "_" + .tags + "_" + (.template|tostring) + "_" + .status' < /tmp/proxmox/out_$1.json >/tmp/proxmox/out_$1.csv
 
 # replace null by 0 (machine not a template), just to make it prettier
 	sed -i -e 's/_null/_0/g' /tmp/proxmox/out_$1.csv
