@@ -165,8 +165,6 @@ function FetchData()
 	# build one file per group
 	rm data_group_*.csv 2>/dev/null
 
-#	declare -A NBUSGR
-
 	if [ -f /tmp/proxmox/groups1.csv ]; then rm /tmp/proxmox/groups1.csv; fi
 	IFS=";";while read -a TAB
 	do
@@ -231,15 +229,13 @@ function ShowTags()
 	COMPT=0
 	printf "\n|   %2d Tags  | #VM+T. |\n|------------+--------|\n" $(wc -l <data_tags.csv)
 	NUM=1
-	for i in "${!TAGAARR[@]}"
+	while read TAG
 	do
-		printf "| %10s | %6d |\n" $i ${TAGAARR[$i]}
+		printf "| %10s | %6d |\n" $TAG ${TAGAARR[$TAG]}
 		((COMPT+=${TAGAARR[$i]}))
-		((NUM++))
-	done
+	done <data_tags.csv
 	echo "|------------+--------|"
 	printf "       Total | %6d |\n" $COMPT
-#	echo "total=$(wc -l <data_tags.csv)"
 }
 
 #================================================================
@@ -275,7 +271,7 @@ function ShowDashboard()
 
 #================================================================
 # Delete a set of VM holding a given tag
-function DeleteVm()
+function DeleteVmByTag()
 {
 	if ! [ -f data_tags.csv ]
 	then
@@ -283,6 +279,7 @@ function DeleteVm()
 		exit 1
 	fi
 
+	unset TAGARR
 	declare -a TAGARR
 	IFS=";";while read TAG
 	do
@@ -290,7 +287,8 @@ function DeleteVm()
 	done <data_tags.csv
 	#echo "TAGARR=${TAGARR[@]}"	
 
-	TAGDEL=$(zenity --list --text="Quel machines ayant le tag ci-dessous souhaitez-vous détruire?" --column="tags" ${TAGARR[@]})
+	TAGDEL=$(zenity --list --height=300 \
+		--text="Quel machines ayant le tag ci-dessous souhaitez-vous détruire?" --column="tags" ${TAGARR[@]})
 	if [ $? != 0 ]; then
 		echo "Interruption"; exit 1
 	fi
@@ -351,9 +349,10 @@ read
 
 #================================================================
 # Show list of VM holding a given tag
-function ViewVmTag()
+function ViewVmByTag()
 {
 	# re-create an array holding the tag names
+	unset TAGARR
 	declare -a TAGARR
 	while read -r tagname
 	do
@@ -388,6 +387,7 @@ function ViewVmTag()
 function ViewGroups()
 {
 # create an array holding the group names, just for the zenity call below
+	unset GROUPARR
 	declare -a GROUPARR
 	while read -r group
 	do
@@ -425,9 +425,10 @@ function ViewGroups()
 
 #================================================================
 # Show list of VM on a given node
-function ViewVM()
+function ViewVmByNode()
 {
 # re-create an array holding the nodes names
+	unset NODEARR
 	declare -a NODEARR
 	while read -r nodename
 	do
@@ -525,12 +526,18 @@ fi
 echo "-connection API: fonctionnelle!"
 
 # Associative array used to count tags
+unset TAGAARR
 declare -A TAGAARR
 
 FetchData
 ShowDashboard
 
-items=("Affichage inventaire" "Liste VMs par Node" "Création VMs" "Suppression VMs" "Liste des users par groupe" "Liste VM par tag")
+items=("Affichage Dashboard" \
+	"Liste VMs par node" \
+	"Liste VMs par tag" \
+	"Création VMs" \
+	"Suppression VMs" \
+	"Liste des users par groupe")
 
 while item=$(zenity --height=400 --width=300 --list \
 	--title="Menu principal" \
@@ -543,11 +550,11 @@ do
 
 	case "$item" in
 		"${items[0]}") ShowDashboard;;
-		"${items[1]}") ViewVM;;
-		"${items[2]}") ./pgvm_create; FetchData; ShowDashboard;;
-		"${items[3]}") DeleteVm; FetchData; ShowDashboard;;
-		"${items[4]}") ViewGroups;;
-		"${items[5]}") ViewVmTag;;
+		"${items[1]}") ViewVmByNode;;
+		"${items[2]}") ViewVmByTag;;
+		"${items[3]}") ./pgvm_create; FetchData; ShowDashboard;;
+		"${items[4]}") DeleteVmByTag; FetchData; ShowDashboard;;
+		"${items[5]}") ViewGroups;;
 		*) echo "Ooops! Invalid option.";;
 	esac
 done

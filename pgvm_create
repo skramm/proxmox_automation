@@ -14,6 +14,11 @@ YEARDAY=$(date '+%y%j')
 #================================================================
 function CreateClone()
 {
+
+	if [ "$DEBUG" = "Y" ]; then
+		echo "-Creation clone sur le node $BASENODE (Id=$TVMID): nom=${VMNAME}, id=$VMID"
+	fi
+
 # ref: https://pve.proxmox.com/pve-docs/api-viewer/#/nodes/{node}/qemu/{vmid}/clone
 	response=$(curl -k \
 		--silent -X POST \
@@ -39,8 +44,8 @@ function AddTags()
 	fi
 }
 
-#================================================================
 # re-create an array holding the nodes names
+unset NODEARR
 declare -a NODEARR
 while read -r nodename
 do
@@ -70,10 +75,11 @@ do
 done
 
 # construction chaine contenant les noms des templates
+unset TEMPLATES
 declare -a TEMPLATES
 IFS=";";while read -a ARR
 do
-	echo "TEMPLATES=$TEMPLATES ARR[0]=${ARR[0]}"
+#	echo "TEMPLATES=$TEMPLATES ARR[0]=${ARR[0]}"
 	x=${ARR[0]}
 	TEMPLATES+=($x)
 done < data_template_$BASENODE.csv
@@ -113,7 +119,6 @@ done
 
 echo "MOD=$MOD"
 
-
 TAGS=$(zenity --entry --text "Donner les tags a associer aux VMs, séparés par des virgules\n(pas d'espaces dans les tags!!)")
 if [ $? != 0 ]; then
 	echo "Interruption"; exit 1
@@ -151,11 +156,13 @@ fi
 #echo "NAMING=$NAMING NAMETYPE=$NAMETYPE" 
 
 # create an array holding the group names, just for the zenity call below
+unset GROUPARR
 declare -a GROUPARR
 while read -r group
 do
 	GROUPARR+=($group)
 done < data_groups.csv
+echo "GROUPARR=${GROUPARR[@]}"
 
 if [ "$NAMETYPE" = "NTU" ]
 then
@@ -213,7 +220,6 @@ then
 		VMID=${YEARDAY}${ID}${NUM}
 		VMNAME=${MOD}-${NUM}
 		
-		echo "-Creation clone $i: nom=${VMNAME}, id=$VMID"
 		CreateClone
 
 		echo " -Ajout des tags"
@@ -222,18 +228,19 @@ then
 		echo " -configuration permissions (roles)"
 	# ref: https://pve.proxmox.com/pve-docs/api-viewer/#/access/acl	
 		response=$(curl -k \
-			--silent -X PUT \
+			-X PUT \
 			-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
 			--data-urlencode "path=/vms/$VMID" \
 			--data-urlencode "groups=$GROUP" \
 			--data-urlencode "roles=PVEVMUser" \
-			--data-urlencode "propagate=1" \
 			"https://${APINODE}.${DOMAIN}:${PORT}/api2/json/access/acl")
 		err=$?
 		if ! [ $err = 0 ]; then
 			echo "response=-$response- err=$err"; exit 1
 		fi
 	done
+
+#			--data-urlencode "propagate=1" \
 
 # VM Naming holds userid
 else
@@ -257,19 +264,21 @@ else
 		echo " -configuration permissions (roles)"
 	# ref: https://pve.proxmox.com/pve-docs/api-viewer/#/access/acl	
 		response=$(curl -k \
-			--silent -X PUT \
+			-X PUT \
 			-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
 			--data-urlencode "path=/vms/$VMID" \
 			--data-urlencode "users=$IDU" \
 			--data-urlencode "roles=PVEVMUser" \
-			--data-urlencode "propagate=1" \
 			"https://${APINODE}.${DOMAIN}:${PORT}/api2/json/access/acl")
 		err=$?
 		if ! [ $err = 0 ]; then
 			echo "response=-$response- err=$err"; exit 1
-
-	done < data_group_${GROUPSEL}.csv
+		fi
+	done <data_group_${GROUPSEL}.csv
 fi
+
+#--data-urlencode "propagate=1" \
+
 exit 0
 
 
