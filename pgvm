@@ -36,7 +36,8 @@ export PORT
 # Fetch data of a given node ($1), called by FetchData()
 function ProcessNode()
 {
-	if [ "$DEBUG" = "Y" ];then echo "process node $1"; fi
+	if [ "$DEBUG" = "Y" ];then echo "ProcessNode(): $1"; fi
+	
 	curl --insecure --silent -X GET \
 		-H "Authorization: PVEAPIToken=$PVUSER@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
 		https://${APINODE}.${DOMAIN}:${PORT}/api2/json/nodes/$1/qemu?full=1 | jq -r '.data[]' >/tmp/proxmox/node_$1.json 2>>$CURLLOG
@@ -50,7 +51,7 @@ function ProcessNode()
 # (and '_' is not allowed in the VM name field)
 	jq -r '(.vmid|tostring) + "_" + .name + "_" + .tags + "_" + (.template|tostring) + "_" + .status' < /tmp/proxmox/node_$1.json >/tmp/proxmox/node_$1.csv
 
-# replace null by 0 (machine not a template), just to make it prettier
+# replace null by 0 (machine is not a template), just to make it prettier
 	sed -i -e 's/_null/_0/g' /tmp/proxmox/node_$1.csv
 
 # replace the semi-colon separating tags with a comma
@@ -66,7 +67,6 @@ function ProcessNode()
 	IFS=";";while read line;
 	do
 		echo "$1;${line}" >> data_node_ALL.csv
-		
  	done < data_node_$1.csv
 
 	# extraction des template de chaque node
@@ -75,7 +75,7 @@ function ProcessNode()
 #	rm template_$1.csv 2>/dev/null
 	IFS=";";while read -a ARR
 	do
-#		echo "0:${ARR[0]} - 1:${ARR[1]} - 2:${ARR[2]} - 3:${ARR[3]}"
+		echo "0:${ARR[0]} - 1:${ARR[1]} - 2:${ARR[2]} - 3:${ARR[3]}"
 #		if [ ${ARR[3]} = 1 ]
 #		then
 #			NBT=$((NBT+1))
@@ -88,15 +88,17 @@ function ProcessNode()
 		if ! [ "${ARR[2]}" = "" ]
 		then
 			tags=${ARR[2]}
+		echo "ProcessNode(): tags=$tags"
 			IFS=","; read -a ARR2 <<< "$tags"; IFS=";"
 			for ((i=0;i<${#ARR2[@]}; i++))
 			do
 				tag=${ARR2[$i]}
-				((TAGARR[$tag]++))
+				((TAGAARR[$tag]++))
 				echo "$tag">>/tmp/proxmox/tags.csv
 			done
 		fi
 	done < data_node_$1.csv
+	echo "tags.csv size=$(wc -l </tmp/proxmox/tags.csv)"
 }
 
 
@@ -105,7 +107,13 @@ function ProcessNode()
 # This function does not print anything
 function FetchData()
 {
-	# Fetch list of nodes
+	if [ "$DEBUG" = "Y" ]; then echo "FetchData()"; fi
+
+# clean out old data
+	rm /tmp/proxmox/tags.csv 2>/dev/null
+	rm data_* 2>/dev/null
+	
+# Fetch list of nodes
 	curl --silent -k \
 		-H "Authorization: PVEAPIToken=$PVUSER@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
 		https://${APINODE}.${DOMAIN}:${PORT}/api2/json/nodes|jq | jq -r '.data[] | .node' >data_nodes.csv 2>>$CURLLOG
@@ -115,50 +123,59 @@ function FetchData()
 		echo "Error: API call failure, err=$?"
 		exit 1
 	fi
-
-	rm /tmp/proxmox/tags.csv 2>/dev/null
-
-	# Associative array used to count tags
-	declare -A TAGARR
+	echo "data_nodes.csv: $(cat data_nodes.csv)"
 
 # Main API loop, iterate on all nodes and collect all the nodes data
-	while read -r nodename
-	do
-		ProcessNode $nodename
-	done < data_nodes.csv
-
-	sort /tmp/proxmox/tags.csv >/tmp/proxmox/tags1.csv
-	uniq /tmp/proxmox/tags1.csv >data_tags.csv
-
-
-# Generate data file for templates
-	rm data_template_* 2>/dev/null
-	NBT=0
 	while read -r NODE
 	do
+# step 1: fetch all the machines on that node
+		ProcessNode $NODE
+
+# step 2: build data file holding templates
 		IFS=";"; while read -a ARR
 		do
-	#		echo "0:${ARR[0]} - 1:${ARR[1]} - 2:${ARR[2]} - 3:${ARR[3]}"
+			echo "0:${ARR[0]} - 1:${ARR[1]} - 2:${ARR[2]} - 3:${ARR[3]}"
 			if [ ${ARR[3]} = 1 ]; then
 				((NBT++))
 				echo "${ARR[1]};${ARR[2]};${ARR[0]}" >> data_template_$NODE.csv
 				echo "$NODE;${ARR[1]};${ARR[2]};${ARR[0]}" >> data_template_ALL.csv
 			fi
 		done < data_node_$NODE.csv
-	done < data_nodes.csv
+
+	done <data_nodes.csv
+
+	sort /tmp/proxmox/tags.csv >/tmp/proxmox/tags1.csv
+	uniq /tmp/proxmox/tags1.csv >data_tags.csv
+
+# Generate a csv file for each tag, holding the type (Vm/T), the VMID, the name, and the node
+	IFS=";";while read -a TAG
+	do
+		echo "FetchData(): TAG=$TAG"
+		while read -a ARR
+		do
+	#		echo "ARR[3]=${ARR[3]}"
+			tags=${ARR[3]}
+			IFS=","; read -a ARR2 <<< "$tags"; IFS=";"
+			for i in ${ARR2[@]}
+			do
+				if [ "$i" = "$TAG" ]; then
+					echo "${ARR[0]};${ARR[1]};${ARR[2]};${ARR[4]};${ARR[3]}" >>data_tag_$TAG.csv
+				fi
+			done
+		done <data_node_ALL.csv
+	done <data_tags.csv
 
 # Generate a csv file for each group, holding the users
 	curl --insecure --silent -X GET \
 		-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
 		"https://${APINODE}.${DOMAIN}:${PORT}/api2/json/access/users?full=1" | jq '.data[]' >/tmp/proxmox/users.json
-
 	err=$?
 	if [ $err != 0 ]; then
 		echo "Error: failure of operation, err=$err";
 		exit 1
 	fi
 
-	# convert json into 3-fields CSV file
+# convert json into 3-fields CSV file
 	jq -r '.userid + ";" + .groups + ";" + .email'</tmp/proxmox/users.json >/tmp/proxmox/users.csv
 
 	sort /tmp/proxmox/users.csv >data_users.csv
@@ -166,7 +183,9 @@ function FetchData()
 
 	# build one file per group
 	rm data_group_*.csv 2>/dev/null
-	declare -A NBUSGR
+
+#	declare -A NBUSGR
+
 	if [ -f /tmp/proxmox/groups1.csv ]; then rm /tmp/proxmox/groups1.csv; fi
 	IFS=";";while read -a TAB
 	do
@@ -229,14 +248,15 @@ function ShowTags()
 	COMPT=0
 	printf "\n|   %2d Tags  | #VM+T. |\n|------------+--------|\n" $(wc -l <data_tags.csv)
 	NUM=1
-	for i in "${!TAGARR[@]}"
+	for i in "${!TAGAARR[@]}"
 	do
-		printf "| %10s | %6d |\n" $i ${TAGARR[$i]}
-		((COMPT+=${TAGARR[$i]}))
+		printf "| %10s | %6d |\n" $i ${TAGAARR[$i]}
+		((COMPT+=${TAGAARR[$i]}))
 		((NUM++))
 	done
 	echo "|------------+--------|"
 	printf "       Total | %6d |\n" $COMPT
+	echo "total=$(wc -l <data_tags.csv)"
 }
 
 #================================================================
@@ -348,7 +368,7 @@ read
 
 #================================================================
 # Show list of VM holding a given tag
-function ViewTags()
+function ViewVmTag()
 {
 	# re-create an array holding the tag names
 	declare -a TAGARR
@@ -493,7 +513,7 @@ ToolCheck jq
 ToolCheck zenity
 
 # Check that these variables are not empty
-VarCheck $TOK_VALUE  TOK_VALUE
+VarCheck $TOK_VALUE TOK_VALUE
 VarCheck $TOK_NAME TOK_NAME
 VarCheck $REALM REALM
 VarCheck $APINODE APINODE
@@ -516,6 +536,9 @@ fi
 #echo "response=$response"
 echo "-connection API: fonctionnelle!"
 
+# Associative array used to count tags
+declare -A TAGAARR
+
 if [ $SINGLEFILE = Y ]; then
 	FetchData
 	ShowDashboard
@@ -534,6 +557,7 @@ do
 		echo "Interruption"; exit 1
 	fi
 
+
 if [ $SINGLEFILE = N ]; then
 
 	case "$item" in
@@ -542,7 +566,7 @@ if [ $SINGLEFILE = N ]; then
 		"${items[2]}") ./pgvm_create; ./pgvm_list;;
 		"${items[3]}") DeleteVm; ./pgvm_list;;
 		"${items[4]}") ViewGroups;;
-		"${items[5]}") ViewTags;;
+		"${items[5]}") ViewVmTag;;
 		*) echo "Ooops! Invalid option.";;
 	esac
 else
@@ -552,7 +576,7 @@ else
 		"${items[2]}") ./pgvm_create; FetchData; ShowDashboard;;
 		"${items[3]}") DeleteVm; FetchData; ShowDashboard;;
 		"${items[4]}") ViewGroups;;
-		"${items[5]}") ViewTags;;
+		"${items[5]}") ViewVmTag;;
 		*) echo "Ooops! Invalid option.";;
 	esac
 fi
