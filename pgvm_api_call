@@ -18,13 +18,6 @@ then
 	exit 1
 fi
 
-# faut-il vraiment tout tester???
-if [ "$PVUSER" = "" ];
-then
-	echo "Internal error, PVUSER not defined"
-	exit 1
-fi
-
 # if no response within 5 s., abort
 response=$(curl --insecure \
 	--connect-timeout 5 \

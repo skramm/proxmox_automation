@@ -47,19 +47,27 @@ do
 	NODEARR+=($nodename)
 done < data_nodes.csv
 
-BASENODE=$(zenity --list --text="Choisissez le noeud où créer la VM" --column="nodes" ${NODEARR[@]})
-if [ $? != 0 ]; then
-	echo "Interruption"; exit 1
-fi
 
-echo "BASENODE=$BASENODE"
+DONE=NO
+while [ $DONE = NO ]
+do
+	BASENODE=$(zenity --list --text="Choisissez le noeud où se trouve le template et où créer les VMs" --column="nodes" ${NODEARR[@]})
+	if [ $? != 0 ]; then
+		echo "Interruption"; exit 1
+	fi
 
-# Afficher la liste des templates dispos sur ce noeud
-if ! [ -f data_template_$BASENODE.csv ]
-then
-	echo "Aucun template disponible sur ce noeud"
-	exit 1
-fi
+	echo "BASENODE=$BASENODE"
+
+	# Afficher la liste des templates dispos sur ce noeud
+	if ! [ -f data_template_$BASENODE.csv ]
+	then
+		echo "Aucun template disponible sur le noeud '$BASENODE'"
+	#	exit 1
+	else
+		DONE=YES
+	fi
+#echo "BASENODE=$BASENODE"
+done
 
 # construction chaine contenant les noms des templates
 declare -a TEMPLATES
@@ -239,9 +247,27 @@ else
 		if [ 1 = ${#NUMA} ]; then NUMB="0$NUMA";fi
 		VMID=${YEARDAY}${ID}${NUMB}
 		VMNAME=${MOD}-${IDU}
-#		echo "IDU1=$IDU1 IDU=$IDU VMID=$VMID VMNAME=$VMNAME"
+		echo "IDU1=$IDU1 IDU=$IDU VMID=$VMID VMNAME=$VMNAME"
 		((NUMA++))
 		CreateClone
+
+		echo " -Ajout des tags"
+		AddTags
+
+		echo " -configuration permissions (roles)"
+	# ref: https://pve.proxmox.com/pve-docs/api-viewer/#/access/acl	
+		response=$(curl -k \
+			--silent -X PUT \
+			-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
+			--data-urlencode "path=/vms/$VMID" \
+			--data-urlencode "users=$IDU" \
+			--data-urlencode "roles=PVEVMUser" \
+			--data-urlencode "propagate=1" \
+			"https://${APINODE}.${DOMAIN}:${PORT}/api2/json/access/acl")
+		err=$?
+		if ! [ $err = 0 ]; then
+			echo "response=-$response- err=$err"; exit 1
+
 	done < data_group_${GROUPSEL}.csv
 fi
 exit 0

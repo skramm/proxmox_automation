@@ -197,8 +197,10 @@ function ShowNodes()
 	while read -r NODE
 	do
 		NBTOT=$(wc -l <data_node_$NODE.csv)
-		NBT=$(wc -l <data_template_$NODE.csv)
-		
+		NBT=0
+		if [ -f data_template_$NODE.csv ]; then
+			NBT=$(wc -l <data_template_$NODE.csv)
+		fi	
 		((NBVM=NBTOT-NBT))
 		printf "| %10s | %3d | %7d | %5d |\n" $NODE $NBVM $NBT $NBTOT
 		((TOTVM+=NBVM))
@@ -459,7 +461,12 @@ function ViewVM()
 		printf " | %-16s | %10d | %13s |\n" ${TAB[1]} ${TAB[0]} ${TAB[2]}
 	done <data_node_$VNODE.csv
 	printf "|------+----+------------------+------------+---------------|\n"
-	NBT=$(wc -l <data_template_$VNODE.csv)
+
+	NBT=0
+	if [ -f data_template_$VNODE.csv ]; then
+		NBT=$(wc -l <data_template_$VNODE.csv)
+	fi
+
 	NBTOT=$(wc -l <data_node_$VNODE.csv)
 	((NBVM=NBTOT-NBT))
 	echo "Bilan: $NBT templates et $NBVM VM, dont $NBON en fonctionnement"
