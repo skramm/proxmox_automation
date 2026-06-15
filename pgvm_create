@@ -9,8 +9,6 @@
 # désactive l'interprétation de '!' dans une chaine
 set +H
 
-YEARDAY=$(date '+%y%j')
-TODAY=$(date '+%Y%m%d_%H%M%S')
 
 #================================================================
 function CheckError()
@@ -160,9 +158,11 @@ START=$(zenity --question --text "$MSGT")
 if [ $? != 0 ]; then
 	echo "Interruption"; exit 1
 fi
-echo "START=$START"
 
+YEARDAY=$(date '+%y%j')
+TODAY=$(date '+%Y%m%d_%H%M%S')
 NUMA=1
+
 IFS=";";while read -a ARR
 do
 	IDU1=${ARR[0]}
