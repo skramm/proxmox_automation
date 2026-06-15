@@ -56,22 +56,19 @@ done < data_nodes.csv
 DONE=NO
 while [ $DONE = NO ]
 do
-	BASENODE=$(zenity --list --text="Choisissez le noeud où se trouve le template et où créer les VMs" --column="nodes" ${NODEARR[@]})
+	BASENODE=$(zenity --list --text="Choisissez le noeud où se trouve le\ntemplate et où créer les VMs" --column="nodes" ${NODEARR[@]})
 	if [ $? != 0 ]; then
 		echo "Interruption"; exit 1
 	fi
 
 	echo "BASENODE=$BASENODE"
 
-	# Afficher la liste des templates dispos sur ce noeud
 	if ! [ -f data_template_$BASENODE.csv ]
 	then
 		echo "Aucun template disponible sur le noeud '$BASENODE'"
-	#	exit 1
 	else
 		DONE=YES
 	fi
-#echo "BASENODE=$BASENODE"
 done
 
 # construction chaine contenant les noms des templates
@@ -226,6 +223,7 @@ then
 		AddTags
 
 		echo " -configuration permissions (roles)"
+		set -x
 	# ref: https://pve.proxmox.com/pve-docs/api-viewer/#/access/acl	
 		response=$(curl -k \
 			-X PUT \
@@ -235,6 +233,8 @@ then
 			--data-urlencode "roles=PVEVMUser" \
 			"https://${APINODE}.${DOMAIN}:${PORT}/api2/json/access/acl")
 		err=$?
+		set +x
+		echo "response=$response"
 		if ! [ $err = 0 ]; then
 			echo "response=-$response- err=$err"; exit 1
 		fi
@@ -263,16 +263,21 @@ else
 
 		echo " -configuration permissions (roles)"
 	# ref: https://pve.proxmox.com/pve-docs/api-viewer/#/access/acl	
-		response=$(curl -k \
+		response=$(curl --insecure --silent \
 			-X PUT \
 			-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
 			--data-urlencode "path=/vms/$VMID" \
-			--data-urlencode "users=$IDU" \
-			--data-urlencode "roles=PVEVMUser" \
+			--data-urlencode "users=$IDU1" \
+			--data-urlencode "roles=PVEVMUser;PVEVMAdmin" \
 			"https://${APINODE}.${DOMAIN}:${PORT}/api2/json/access/acl")
 		err=$?
+		echo "response=$response"
 		if ! [ $err = 0 ]; then
 			echo "response=-$response- err=$err"; exit 1
+		fi
+		if [ $response != '{\"data\":null}' ]; then
+			echo "Error: server said $response" 
+			exit 1
 		fi
 	done <data_group_${GROUPSEL}.csv
 fi

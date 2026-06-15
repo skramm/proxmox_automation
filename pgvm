@@ -4,6 +4,9 @@
 # S. Kramm, URN, 2026
 # https://github.com/skramm/proxmox_automation
 
+
+# TODO bug: une fois des machines avec un tag créer, quand on les supprime, le tag reste à une valeur incorrecte
+
 if [ "$1" = "" ]
 then
 	echo "Erreur, donner en argument le fichier de credentials"
