@@ -34,20 +34,46 @@ export PORT
 
 
 #================================================================
+function ApiCall()
+{
+	if [ "$DEBUG" = "Y" ]; then
+		if [ "$2" = "" ]
+		then
+			echo "Internal error, endpoint missing"
+			exit 1
+		fi
+		if [ "$1" = "" ]
+		then
+			echo "Internal error, POST or GET missing"
+			exit 1
+		fi
+	fi
+
+# if no response within 5 s., abort
+	response=$(curl --insecure \
+		--connect-timeout 5 \
+		--silent -X $1 \
+		-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
+		"$2")
+	err=$?
+	if ! [ $err = 0 ];
+	then
+		echo "Error: API call failure, HTTP method='$1', endpoint='$2'"
+		echo -e " -curl return value: $err\n -API response: $response"
+		exit 1
+	fi
+}
+
+
+#================================================================
 # Fetch data of a given node ($1), called by FetchData()
 function ProcessNode()
 {
 	if [ "$DEBUG" = "Y" ];then echo "ProcessNode(): $1"; fi
 	
-	curl --insecure --silent -X GET \
-		-H "Authorization: PVEAPIToken=$PVUSER@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
-		https://${APINODE}.${DOMAIN}:${PORT}/api2/json/nodes/$1/qemu?full=1 | jq -r '.data[]' >/tmp/proxmox/node_$1.json 2>>$CURLLOG
-	err=$?
-	if ! [ $err = 0 ]
-	then
-		echo "node '$1': echec!"
-		exit 1
-	fi
+	ApiCall GET "https://${APINODE}.${DOMAIN}:${PORT}/api2/json/nodes/$1/qemu?full=1"
+	jq -r '.data[]' <<< "$response" >/tmp/proxmox/node_$1.json 2>>$CURLLOG 
+
 # we use the '_' character to separate fields because in the json file, multiple tags are separated with ';'
 # (and '_' is not allowed in the VM name field)
 	jq -r '(.vmid|tostring) + "_" + .name + "_" + .tags + "_" + (.template|tostring) + "_" + .status' < /tmp/proxmox/node_$1.json >/tmp/proxmox/node_$1.csv
@@ -101,15 +127,18 @@ function FetchData()
 	rm data_* 2>/dev/null
 	
 # Fetch list of nodes
-	curl --silent -k \
-		-H "Authorization: PVEAPIToken=$PVUSER@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
-		https://${APINODE}.${DOMAIN}:${PORT}/api2/json/nodes|jq | jq -r '.data[] | .node' >data_nodes.csv 2>>$CURLLOG
-	err=$?
-	if ! [ $err = 0 ];
-	then
-		echo "Error: API call failure, err=$?"
-		exit 1
-	fi
+	ApiCall GET "https://${APINODE}.${DOMAIN}:${PORT}/api2/json/nodes"
+#	curl --silent -k \
+#		-H "Authorization: PVEAPIToken=$PVUSER@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
+#		https://${APINODE}.${DOMAIN}:${PORT}/api2/json/nodes|jq | jq -r '.data[] | .node' >data_nodes.csv 2>>$CURLLOG
+	
+	jq  -r '.data[] | .node' <<<"$response" >data_nodes.csv 2>>$CURLLOG
+#	err=$?
+#	if ! [ $err = 0 ];
+#	then
+#		echo "Error: API call failure, err=$?"
+#		exit 1
+#	fi
 
 # Main API loop, iterate on all nodes and collect all the nodes data
 	while read -r NODE
@@ -150,9 +179,12 @@ function FetchData()
 	done <data_tags.csv
 
 # Generate a csv file for each group, holding the users
-	curl --insecure --silent -X GET \
-		-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
-		"https://${APINODE}.${DOMAIN}:${PORT}/api2/json/access/users?full=1" | jq '.data[]' >/tmp/proxmox/users.json
+	ApiCall GET "https://${APINODE}.${DOMAIN}:${PORT}/api2/json/access/users?full=1"
+#	curl --insecure --silent -X GET \
+#		-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
+#		"https://${APINODE}.${DOMAIN}:${PORT}/api2/json/access/users?full=1" | jq '.data[]' >/tmp/proxmox/users.json
+	jq -r '.data[]' <<<$response >/tmp/proxmox/users.json
+
 	err=$?
 	if [ $err != 0 ]; then
 		echo "Error: failure of operation, err=$err";
@@ -521,11 +553,7 @@ mkdir -p /tmp/proxmox
 # TODO: bug, en cas de non réponse, pas de message d'erreur !!
 # test de la réponse de l'API
 echo "-Test de la réponse de l'API"
-response=$(./pgvm_api_call GET https://${APINODE}.${DOMAIN}:${PORT}/api2/json/version)
-if ! [ $? = 0 ]; then
-	exit 1
-fi
-#echo "response=$response"
+ApiCall GET "https://${APINODE}.${DOMAIN}:${PORT}/api2/json/version"
 echo "-connection API: fonctionnelle!"
 
 # Associative array used to count tags
