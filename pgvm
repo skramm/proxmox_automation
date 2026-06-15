@@ -65,6 +65,7 @@ function ApiCall()
 }
 
 
+
 #================================================================
 # Fetch data of a given node ($1), called by FetchData()
 function ProcessNode()
@@ -125,20 +126,11 @@ function FetchData()
 # clean out old data
 	rm /tmp/proxmox/tags.csv 2>/dev/null
 	rm data_* 2>/dev/null
+	TAGAARR=()
 	
 # Fetch list of nodes
 	ApiCall GET "https://${APINODE}.${DOMAIN}:${PORT}/api2/json/nodes"
-#	curl --silent -k \
-#		-H "Authorization: PVEAPIToken=$PVUSER@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
-#		https://${APINODE}.${DOMAIN}:${PORT}/api2/json/nodes|jq | jq -r '.data[] | .node' >data_nodes.csv 2>>$CURLLOG
-	
 	jq  -r '.data[] | .node' <<<"$response" >data_nodes.csv 2>>$CURLLOG
-#	err=$?
-#	if ! [ $err = 0 ];
-#	then
-#		echo "Error: API call failure, err=$?"
-#		exit 1
-#	fi
 
 # Main API loop, iterate on all nodes and collect all the nodes data
 	while read -r NODE
@@ -180,16 +172,7 @@ function FetchData()
 
 # Generate a csv file for each group, holding the users
 	ApiCall GET "https://${APINODE}.${DOMAIN}:${PORT}/api2/json/access/users?full=1"
-#	curl --insecure --silent -X GET \
-#		-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
-#		"https://${APINODE}.${DOMAIN}:${PORT}/api2/json/access/users?full=1" | jq '.data[]' >/tmp/proxmox/users.json
 	jq -r '.data[]' <<<$response >/tmp/proxmox/users.json
-
-	err=$?
-	if [ $err != 0 ]; then
-		echo "Error: failure of operation, err=$err";
-		exit 1
-	fi
 
 # convert json into 3-fields CSV file
 	jq -r '.userid + ";" + .groups + ";" + .email'</tmp/proxmox/users.json >/tmp/proxmox/users.csv
@@ -263,11 +246,14 @@ function ShowTags()
 {
 	COMPT=0
 	printf "\n|   %2d Tags  | #VM+T. |\n|------------+--------|\n" $(wc -l <data_tags.csv)
-	NUM=1
 	while read TAG
 	do
-		printf "| %10s | %6d |\n" $TAG ${TAGAARR[$TAG]}
-		((COMPT+=${TAGAARR[$i]}))
+		if [ "$TAG" = " " ]; then
+			printf "| (sans tag) | %6d |\n" ${TAGAARR[$TAG]}
+		else
+			printf "| %10s | %6d |\n" $TAG ${TAGAARR[$TAG]}
+		fi
+		((COMPT+=${TAGAARR[$TAG]}))
 	done <data_tags.csv
 	echo "|------------+--------|"
 	printf "       Total | %6d |\n" $COMPT
@@ -361,15 +347,16 @@ do
 					echo "node ${TAB[0]}: machine ${TAB[2]}, id=${TAB[1]} est un template, pas de suppression"
 				else
 					echo "node ${TAB[0]}: suppression machine ${TAB[2]}, id=${TAB[1]}"
-					response=$(curl --insecure --silent -X DELETE \
-						-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
-						"https://${APINODE}.${DOMAIN}:${PORT}/api2/json/nodes/${TAB[0]}/qemu/${TAB[1]}?node=${TAB[0]}&vmid=${TAB[1]}")
-					err=$?
+					ApiCall DELETE "https://${APINODE}.${DOMAIN}:${PORT}/api2/json/nodes/${TAB[0]}/qemu/${TAB[1]}?node=${TAB[0]}&vmid=${TAB[1]}"
+#					response=$(curl --insecure --silent -X DELETE \
+#						-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
+#						"https://${APINODE}.${DOMAIN}:${PORT}/api2/json/nodes/${TAB[0]}/qemu/${TAB[1]}?node=${TAB[0]}&vmid=${TAB[1]}")
+#					err=$?
 
-					if [ $err != 0 ]; then
-						echo "Error: failure of delete operation, err=$err, response='$response'";
-						exit 1
-					fi
+#					if [ $err != 0 ]; then
+#						echo "Error: failure of delete operation, err=$err, response='$response'";
+#						exit 1
+#					fi
 					((COMPT++))
 				fi
 			fi
@@ -540,6 +527,7 @@ ToolCheck zenity
 VarCheck $TOK_VALUE TOK_VALUE
 VarCheck $TOK_NAME TOK_NAME
 VarCheck $REALM REALM
+VarCheck $PVUSER PVUSER
 VarCheck $APINODE APINODE
 VarCheck $DOMAIN DOMAIN
 VarCheck $PORT PORT
@@ -567,7 +555,7 @@ items=("Affichage Dashboard" \
 	"Liste VMs par node" \
 	"Liste VMs par tag" \
 	"Création VMs" \
-	"Suppression VMs" \
+	"Suppression VMs par tag" \
 	"Liste des users par groupe")
 
 while item=$(zenity --height=400 --width=300 --list \
@@ -580,7 +568,7 @@ do
 	fi
 
 	case "$item" in
-		"${items[0]}") ShowDashboard;;
+		"${items[0]}") FetchData; ShowDashboard;;
 		"${items[1]}") ViewVmByNode;;
 		"${items[2]}") ViewVmByTag;;
 		"${items[3]}") ./pgvm_create; FetchData; ShowDashboard;;
