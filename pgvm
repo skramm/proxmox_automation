@@ -224,11 +224,13 @@ function ShowNodes()
 		IFSOLD=$IFS
 		IFS=";"; while read -a ARR
 		do
-			if [ "${ARR[4]}" = "running" ]; then
-				((NBON++))
-			fi
-			if [ "${ARR[4]}" = "stopped" ]; then
-				((NBOFF++))
+			if [ "${ARR[3]}" = "0" ]; then
+				if [ "${ARR[4]}" = "running" ]; then
+					((NBON++))
+				fi
+				if [ "${ARR[4]}" = "stopped" ]; then
+					((NBOFF++))
+				fi
 			fi
 		done <data_node_$NODE.csv
 		IFS=$IFSOLD

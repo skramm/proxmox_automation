@@ -13,27 +13,13 @@ YEARDAY=$(date '+%y%j')
 TODAY=$(date '+%Y%m%d_%H%M%S')
 
 #================================================================
-function CreateClone()
+function CheckError()
 {
-	if [ "$DEBUG" = "Y" ]; then
-		echo "-Creation clone sur le node $BASENODE (Id=$TVMID): nom=${VMNAME}, id=$VMID"
-	fi
-	DESC="VM Cloned from template $TEMPLATE (Id=$TVMID), created on $TODAY by user $PVUSER"
-	
-# ref: https://pve.proxmox.com/pve-docs/api-viewer/#/nodes/{node}/qemu/{vmid}/clone
-	response=$(curl -k \
-		--silent -X POST \
-		-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
-		"https://${APINODE}.${DOMAIN}:${PORT}/api2/json/nodes/$BASENODE/qemu/$TVMID/clone" \
-		--data-urlencode node=$BASENODE \
-		--data-urlencode vmid=$TVMID \
-		--data-urlencode newid=$VMID \
-		--data-urlencode name=$VMNAME \
-		--data-urlencode description="$DESC")
-	err=$?
+#	echo "response=$response"
 	if ! [ $err = 0 ]; then
-		echo "response=-$response- err=$err"; exit 1
+		echo "Curl error: $err, server response=-$response-"; exit 1
 	fi
+	echo "$response" >>$CURLLOG
 }
 
 #================================================================
@@ -187,8 +173,25 @@ do
 	VMID=${YEARDAY}${ID}${NUMB}
 	VMNAME=${MOD}-${IDU}
 	echo "IDU1=$IDU1 IDU=$IDU VMID=$VMID VMNAME=$VMNAME"
-	((NUMA++))
-	CreateClone
+
+	if [ "$DEBUG" = "Y" ]; then
+		echo "-Create clone on node $BASENODE (Id=$TVMID): name=${VMNAME}, id=$VMID"
+	fi
+	DESC="VM Cloned from template $TEMPLATE (Id=$TVMID), created on $TODAY by user $PVUSER"
+	
+	echo " -Clonage VM depuis $TEMPLATE, nom=$VMNAME"
+# ref: https://pve.proxmox.com/pve-docs/api-viewer/#/nodes/{node}/qemu/{vmid}/clone
+	response=$(curl -k \
+		--silent -X POST \
+		-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
+		"https://${APINODE}.${DOMAIN}:${PORT}/api2/json/nodes/$BASENODE/qemu/$TVMID/clone" \
+		--data-urlencode node=$BASENODE \
+		--data-urlencode vmid=$TVMID \
+		--data-urlencode newid=$VMID \
+		--data-urlencode name=$VMNAME \
+		--data-urlencode description="$DESC")
+	err=$?
+	CheckError
 
 	echo " -Ajout des tags"
 	response=$(curl -k \
@@ -196,13 +199,7 @@ do
 		-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
 		"https://${APINODE}.${DOMAIN}:${PORT}/api2/json/nodes/$BASENODE/qemu/$VMID/config?node=$BASENODE&vmid=$VMID&tags=$TAGS")
 	err=$?
-	if ! [ $err = 0 ]; then
-		echo "response=-$response- err=$err"; exit 1
-	fi
-	if [ "$response" != "{\"data\":null}" ]; then
-		echo "Error: server said '$response'" 
-		exit 1
-	fi
+	CheckError
 
 
 	echo " -configuration permissions (roles)"
@@ -216,14 +213,9 @@ do
 		--data-urlencode "propagate=1" \
 		"https://${APINODE}.${DOMAIN}:${PORT}/api2/json/access/acl")
 	err=$?
-	echo "response=$response"
-	if ! [ $err = 0 ]; then
-		echo "response=-$response- err=$err"; exit 1
-	fi
-	if [ "$response" != "{\"data\":null}" ]; then
-		echo "Error: server said '$response'" 
-		exit 1
-	fi
+	CheckError
+
+	((NUMA++))
 done <data_group_${GROUPSEL}.csv
 
 exit 0
