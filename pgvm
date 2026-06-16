@@ -22,16 +22,6 @@ then
 fi
 source $TOKEN_FILE
 
-# TODO: this will be useless once all the code will be in a single file
-export PVUSER
-export TOK_VALUE
-export TOK_NAME
-export REALM
-export CURLLOG
-export APINODE
-export DOMAIN
-export PORT
-
 
 #================================================================
 function ApiCall()
@@ -63,7 +53,6 @@ function ApiCall()
 		exit 1
 	fi
 }
-
 
 
 #================================================================
@@ -130,8 +119,9 @@ function FetchData()
 	
 # Fetch list of nodes
 	ApiCall GET "https://${APINODE}.${DOMAIN}:${PORT}/api2/json/nodes"
-	jq  -r '.data[] | .node' <<<"$response" >data_nodes.csv 2>>$CURLLOG
-
+	jq  -r '.data[] | .node' <<<"$response" >/tmp/proxmox/data_nodes.csv 2>>$CURLLOG
+	sort /tmp/proxmox/data_nodes.csv >data_nodes.csv
+	
 # Main API loop, iterate on all nodes and collect all the nodes data
 	while read -r NODE
 	do
@@ -152,6 +142,12 @@ function FetchData()
 
 	sort /tmp/proxmox/tags.csv >/tmp/proxmox/tags1.csv
 	uniq /tmp/proxmox/tags1.csv >data_tags.csv
+
+	TAGARR=()
+	IFS=";";while read TAG
+	do
+		TAGARR+=($TAG)
+	done <data_tags.csv
 
 # Generate a csv file for each tag, holding the type (Vm/T), the VMID, the name, and the node
 	IFS=";";while read -a TAG
@@ -244,9 +240,9 @@ function ShowNodes()
 	done < data_nodes.csv
 
 	echo "|------------+-----+---------+-------||-----|-----|"
-#	echo "|------------+-----+---------+-------|"
 	printf "      Totaux | %3d | %7d | %5d || %3d | %3d |\n" $TOTVM $TOTT $TOTALL $TOTON $TOTOFF
 }
+
 
 #================================================================
 function ShowTemplates()
@@ -473,10 +469,10 @@ do
 	if [ 1 = ${#NUMA} ]; then NUMB="0$NUMA";fi
 	VMID=${YEARDAY}${ID}${NUMB}
 	VMNAME=${MOD}-${IDU}
-	echo "IDU1=$IDU1 IDU=$IDU VMID=$VMID VMNAME=$VMNAME"
+#	echo "IDU1=$IDU1 IDU=$IDU VMID=$VMID VMNAME=$VMNAME"
 
 	if [ "$DEBUG" = "Y" ]; then
-		echo "-Create clone on node $BASENODE (Id=$TVMID): name=${VMNAME}, id=$VMID"
+		echo "-Create VM on node $BASENODE (Id=$TVMID): name=${VMNAME}, id=$VMID"
 	fi
 	DESC="VM Cloned from template $TEMPLATE (Id=$TVMID), created on $TODAY by user $PVUSER"
 	
@@ -530,14 +526,6 @@ function DeleteVmByTag()
 		exit 1
 	fi
 
-	unset TAGARR
-	declare -a TAGARR
-	IFS=";";while read TAG
-	do
-		TAGARR+=($TAG)
-	done <data_tags.csv
-	#echo "TAGARR=${TAGARR[@]}"	
-
 	TAGDEL=$(zenity --list --height=300 \
 		--text="Quel machines ayant le tag ci-dessous souhaitez-vous détruire?" --column="tags" ${TAGARR[@]})
 	if [ $? != 0 ]; then
@@ -578,15 +566,6 @@ do
 				else
 					echo "node ${TAB[0]}: suppression machine ${TAB[2]}, id=${TAB[1]}"
 					ApiCall DELETE "https://${APINODE}.${DOMAIN}:${PORT}/api2/json/nodes/${TAB[0]}/qemu/${TAB[1]}?node=${TAB[0]}&vmid=${TAB[1]}"
-#					response=$(curl --insecure --silent -X DELETE \
-#						-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
-#						"https://${APINODE}.${DOMAIN}:${PORT}/api2/json/nodes/${TAB[0]}/qemu/${TAB[1]}?node=${TAB[0]}&vmid=${TAB[1]}")
-#					err=$?
-
-#					if [ $err != 0 ]; then
-#						echo "Error: failure of delete operation, err=$err, response='$response'";
-#						exit 1
-#					fi
 					((COMPT++))
 				fi
 			fi
@@ -603,14 +582,6 @@ read
 # Show list of VM holding a given tag
 function ViewVmByTag()
 {
-	# re-create an array holding the tag names
-	unset TAGARR
-	declare -a TAGARR
-	while read -r tagname
-	do
-		TAGARR+=($tagname)
-	done < data_tags.csv
-
 	VTAG=$(zenity --list --height=300 --text="Quel tag?" --column="Tags" "${TAGARR[@]}")
 	if [ $? != 0 ]; then
 		echo "Interruption"; exit 1
@@ -777,6 +748,9 @@ echo "-connection API: fonctionnelle!"
 # Associative array used to count tags
 unset TAGAARR
 declare -A TAGAARR
+
+unset TAGARR
+declare -a TAGARR
 
 FetchData
 ShowDashboard
