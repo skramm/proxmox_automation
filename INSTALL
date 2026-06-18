@@ -1,0 +1,2 @@
+install -m a+rx pgvm /usr/local/bin
+
