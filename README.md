@@ -1,12 +1,11 @@
 # proxmox_automation
 
-Scripts to automate handling sets of identical VMs
-audience: at present, local team
+A bash script to automate handling sets of identical VMs on a Proxmox cluster.
+
+Audience: probably CS instructors having to provision VMs for student lab sessions.
 
 > [!CAUTION]
 > **Read before you run anything.**
-
-This is designed for a local installation of a Proxmox instance
 
 [doc en français](readme_fr.md)
 

@@ -4,13 +4,16 @@
 - Date: 2026/06
 - Statut: alpha
 - Licence: ???
+- Home: https://github.com/skramm/proxmox_automation
 
-## 
-- vous êtes enseignant dans une structure type "IUT RT";
-- vous avez besoin que vos étudiants aient accès à des VM déjà configurées, sur laquelles ils seront administrateurs, pour des TP réseaux, systèmes, etc...
+
+##  Pour qui?
+
+- vous êtes enseignant dans une structure d'enseignement, et vous avez besoin que vos étudiants aient accès à des VM déjà configurées, sur laquelles ils seront administrateurs, pour des TP réseaux, systèmes, etc...
 - vous et vos étudiants disposez d'un accès à un cluster Proxmox
 
 => Alors cet outil est pour vous!
+
 
 ## Outils nécessaires
 - `bash`
@@ -35,7 +38,7 @@ Nous disposons dans le département d'un hyperviseur "ProxMox", afin que les ét
 L'interface web native fournie est assez complète mais dans un cadre pédagogique, nous avons des besoins spécifiques qu'elle ne remplit pas.
 
 Pour des TP, nous avons besoin de pouvoir créer un ensemble de VM toutes identiques, typiquement une ou deux par étudiant, et basées sur un même "template".
-Avec l'interface web native, ceci est laborieux: ça implique de cloner les machines une par une, et leur assigner ensuite les permissions ("rôles).
+Avec l'interface web native, ceci est laborieux: ça implique de cloner les machines une par une, de les nommer, et leur assigner ensuite les permissions ("rôles).
 De plus, les VM à créer peuvent être différentes selon les TP, et certains TP peuvent nécessiter aussi de créer 2, voire 3 VM.
 
 Il n'est donc pas envisageable d'utiliser pour cela l'interface web native.
@@ -60,14 +63,13 @@ Pour les collègues de l'URN, une doc générale de type "tuto" sur l'utilisatio
 
 ### Connection à l'API
 
-La connection à l'API implique d'avoir préalablement généré un "token API" via l'interface graphique.
-
+La connection à l'API implique d'avoir préalablement généré un "token API" via l'interface web de Proxmox.
 Une fois ce token obtenu, il faut le placer dans un fichier qui devra contenir les définitions suivantes:
 
 ```
 TOK_NAME=XXX
 TOK_VALUE=YYY
-REALM=UR
+REALM=MYREALM
 PVUSER=ZZZZ
 APINODE=brandon
 DOMAIN=mydomain.org
@@ -75,8 +77,10 @@ PORT=1234
 ```
 Remplacer `XXX` et `YYY` par nom et valeur du token généré,
 `mydomain.org` par votre domaine,
-ZZZZ par votre identifiant sur le domaine, 
-et donner le bon numéro de port.
+`MYREALM` par l'identifiant du serveur d'authentification,
+`ZZZZ` par votre identifiant sur le domaine,
+et donner le bon numéro de port dans la variable `PORT`.
+
 
 L'API n'est accessible que via l'une des machines du cluster, il faut donc spécifier le nom de celle qui sera utilisée dans la variable `APINODE`.
 Si ce node tombe, il suffit d'un prendre un autre.
@@ -110,7 +114,7 @@ Avec:
 - `YY`: 2 derniers chiffres de l'année
 - `DDD`: jour de l'année (1 - 365 )
 - `XX`: un identifiant donné dans le script de création (00 à 99), et commun à l'ensemble des VM créées par le script
-- `NN`: un identifiant de la machine, lors de la création d'un ensemble de VM (01 à 99)
+- `NN`: un identifiant de la machine parmi le lot, généré automatiquement lors de la création du lot (01 à 99)
 
 
 ### Détails technique
