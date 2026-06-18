@@ -5,6 +5,12 @@
 - Statut: alpha
 - Licence: ???
 
+## 
+- vous êtes enseignant dans une structure type "IUT RT";
+- vous avez besoin que vos étudiants aient accès à des VM déjà configurées, sur laquelles ils seront administrateurs, pour des TP réseaux, systèmes, etc...
+- vous et vos étudiants disposez d'un accès à un cluster Proxmox
+
+=> Alors cet outil est pour vous!
 
 ## Outils nécessaires
 - `bash`
@@ -34,7 +40,10 @@ De plus, les VM à créer peuvent être différentes selon les TP, et certains T
 
 Il n'est donc pas envisageable d'utiliser pour cela l'interface web native.
 
-D'autres solutions auraient pu être utilisées (probablement des outils comme Terraform?), l'approche utilisée ici a consisté à utiliser l'API HTTP directement, via `curl` depuis un script bash.
+D'autres solutions auraient pu être utilisées (probablement des outils comme Terraform?), l'approche utilisée ici a consisté à utiliser l'API HTTP directement, via `curl` depuis un script bash qui va itérer la création des clones.
+
+L'outil peut aussi être vu comme une supervision, il affiche le nombre de VM et de template par node, ainsi que le nombre de machiens allumées et éteintes.
+
 
 
 **Objectifs de ce programme**:  
