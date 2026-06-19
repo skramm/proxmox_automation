@@ -455,7 +455,7 @@ DONE=NO
 while [ $DONE = NO ]
 do
 
-	TAGS=$(zenity --entry --text "Donner les tags a associer aux VMs, séparés par des virgules\n(pas d'espaces dans les tags!!)")
+	TAGS=$(zenity --entry --text "Donner les tags à associer aux VMs, séparés par des virgules\n(pas d'espaces dans les tags!!)")
 	if [ $? != 0 ]; then
 		echo "Interruption"; exit 1
 	fi
@@ -500,6 +500,21 @@ if [ $? != 0 ]; then
 	echo "Interruption"; exit 1
 fi
 echo "GROUPSEL=$GROUPSEL"
+
+OTHERGROUP=$(zenity --question --test "Faut-il donner les droit sur ces VM à un autre groupe d'utilisateurs?")
+if [ $? != 0 ]; then
+	echo "Interruption"; exit 1
+fi
+echo "OTHERGROUP=$OTHERGROUP"
+
+if [ "$OTHERGROUP" = "YES" ]; then
+	OTHERGROUPSEL=$(zenity --list --text "Quel groupe d'utilisateurs?" --column="Groupe" ${GROUPARR[@]} )
+	if [ $? != 0 ]; then
+		echo "Interruption"; exit 1
+	fi
+	echo "OTHERGROUPSEL=$OTHERGROUPSEL"
+fi
+
 VMNAMES="${MOD}-XXX (avec XXX l'id user)"
 NB=$(wc -l <data_group_${GROUPSEL}.csv)
 
@@ -550,12 +565,13 @@ do
 	CheckError
 
 	echo " -Ajout des tags"
-	response=$(curl -k \
-		--silent -X POST \
-		-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
-		"https://${APINODE}.${DOMAIN}:${PORT}/api2/json/nodes/$BASENODE/qemu/$VMID/config?node=$BASENODE&vmid=$VMID&tags=$TAGS")
-	err=$?
-	CheckError
+	ApiCall POST "/api2/json/nodes/$BASENODE/qemu/$VMID/config?node=$BASENODE&vmid=$VMID&tags=$TAGS"
+#	response=$(curl -k \
+#		--silent -X POST \
+#		-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
+#		"https://${APINODE}.${DOMAIN}:${PORT}/api2/json/nodes/$BASENODE/qemu/$VMID/config?node=$BASENODE&vmid=$VMID&tags=$TAGS")
+#	err=$?
+#	CheckError
 
 
 	echo " -configuration permissions (roles)"
