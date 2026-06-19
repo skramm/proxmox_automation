@@ -15,7 +15,7 @@
 
 if [ "$1" = "" ]
 then
-	echo "Erreur, donner en argument le fichier de credentials"
+	echo "Erreur, donner en argument le fichier de credentials permettant la connexion au cluster Proxmox"
 	exit 1
 fi
 TOKEN_FILE=$1
@@ -155,7 +155,7 @@ function FetchData()
 		TAGARR+=($TAG)
 	done <data_tags.csv
 
-# Generate a csv file for each tag, holding the type (Vm/T), the VMID, the name, and the node
+# Generate a csv file for each tag, holding the node, the VMID, the name, type (Vm:0/T:1) (in that order)
 	IFS=";";while read -a TAG
 	do
 		while read -a ARR
@@ -166,7 +166,9 @@ function FetchData()
 			for i in ${ARR2[@]}
 			do
 				if [ "$i" = "$TAG" ]; then
-					echo "${ARR[0]};${ARR[1]};${ARR[2]};${ARR[4]};${ARR[3]}" >>data_tag_$TAG.csv
+					fname=data_tag_$TAG
+#					if [ "$TAG" = " " ]; then fname=data_tag_NOTAG; fi
+					echo "${ARR[0]};${ARR[1]};${ARR[2]};${ARR[4]};${ARR[3]}" >>$fname.csv
 				fi
 			done
 		done <data_node_ALL.csv
@@ -332,7 +334,7 @@ function StartStop()
 	if [ $? != 0 ]; then
 		echo "Interruption"; exit 1
 	fi
-	ACTION=$(zenity --list --text="Start ou Stop?" --column="Action" ("Start" "Stop"))
+	ACTION=$(zenity --list --text="Start ou Stop?" --column="Action" "Start" "Stop")
 	if [ $? != 0 ]; then
 		echo "Interruption"; exit 1
 	fi
@@ -359,18 +361,21 @@ function StartStop()
 		echo "Interruption"; exit 1
 	fi
 
-	exit 1 # temp
+#	exit 1 # temp
 
 	IFS=";";while read -a TAB
 	do
 		if [ ${TAB[3]} == 0 ]; then
-			node=${TAB[?]}
-			VMID=${TAB[?]}
+			NODE=${TAB[0]}
+			VMID=${TAB[1]}
+#			set -x
 			if [ "$ACTION" = "Stop" ]; then
 				ApiCall POST "/api2/json/nodes/$NODE/qemu/$VMID/status/shutdown?forceStop=1"
 			else
 				ApiCall POST "/api2/json/nodes/$NODE/qemu/$VMID/status/start"
 			fi
+#			set +x
+			echo "resp=$response"
 		fi
 	done <data_tag_$VTAG.csv
 }
@@ -501,18 +506,13 @@ if [ $? != 0 ]; then
 fi
 echo "GROUPSEL=$GROUPSEL"
 
-OTHERGROUP=$(zenity --question --test "Faut-il donner les droit sur ces VM à un autre groupe d'utilisateurs?")
-if [ $? != 0 ]; then
-	echo "Interruption"; exit 1
-fi
-echo "OTHERGROUP=$OTHERGROUP"
-
-if [ "$OTHERGROUP" = "YES" ]; then
-	OTHERGROUPSEL=$(zenity --list --text "Quel groupe d'utilisateurs?" --column="Groupe" ${GROUPARR[@]} )
+zenity --question --text "Faut-il donner les droit sur ces VM à un autre groupe d'utilisateurs?"
+if [ $? = 0 ]; then
+	OTHERGROUP=$(zenity --list --text "Quel groupe d'utilisateurs?" --column="Groupe" ${GROUPARR[@]} )
 	if [ $? != 0 ]; then
 		echo "Interruption"; exit 1
 	fi
-	echo "OTHERGROUPSEL=$OTHERGROUPSEL"
+	echo "OTHERGROUP=$OTHERGROUP"
 fi
 
 VMNAMES="${MOD}-XXX (avec XXX l'id user)"
