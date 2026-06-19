@@ -50,7 +50,7 @@ function ApiCall()
 		--connect-timeout 5 \
 		--silent -X $1 \
 		-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
-		"$2")
+		"https://${APINODE}.${DOMAIN}:${PORT}$2")
 	err=$?
 	if ! [ $err = 0 ];
 	then
@@ -67,7 +67,7 @@ function ProcessNode()
 {
 	if [ "$DEBUG" = "Y" ];then echo "ProcessNode(): $1"; fi
 	
-	ApiCall GET "https://${APINODE}.${DOMAIN}:${PORT}/api2/json/nodes/$1/qemu?full=1"
+	ApiCall GET "/api2/json/nodes/$1/qemu?full=1"
 	jq -r '.data[]' <<< "$response" >/tmp/proxmox/node_$1.json 2>>$CURLLOG 
 
 # we use the '_' character to separate fields because in the json file, multiple tags are separated with ';'
@@ -124,7 +124,7 @@ function FetchData()
 	TAGAARR=()
 	
 # Fetch list of nodes
-	ApiCall GET "https://${APINODE}.${DOMAIN}:${PORT}/api2/json/nodes"
+	ApiCall GET "/api2/json/nodes"
 	jq  -r '.data[] | .node' <<<"$response" >/tmp/proxmox/data_nodes.csv 2>>$CURLLOG
 	sort /tmp/proxmox/data_nodes.csv >data_nodes.csv
 	
@@ -173,7 +173,7 @@ function FetchData()
 	done <data_tags.csv
 
 # Generate a csv file for each group, holding the users
-	ApiCall GET "https://${APINODE}.${DOMAIN}:${PORT}/api2/json/access/users?full=1"
+	ApiCall GET "/api2/json/access/users?full=1"
 	jq -r '.data[]' <<<$response >/tmp/proxmox/users.json
 
 # convert json into 3-fields CSV file
@@ -322,6 +322,59 @@ function CheckError()
 	fi
 	echo "$response" >>$CURLLOG
 }
+
+
+#================================================================
+# Start or Stop all VMs having a given tag
+function StartStop()
+{
+	VTAG=$(zenity --list --height=300 --text="Quel tag?" --column="Tags" "${TAGARR[@]}")
+	if [ $? != 0 ]; then
+		echo "Interruption"; exit 1
+	fi
+	ACTION=$(zenity --list --text="Start ou Stop?" --column="Action" ("Start" "Stop"))
+	if [ $? != 0 ]; then
+		echo "Interruption"; exit 1
+	fi
+
+	if ! [ -f data_tag_$VTAG.csv ]; then
+		echo "Erreur, fichier data_tag_$VTAG.csv introuvable !"; exit 1
+	fi
+
+	COUNT=0
+	IFS=";";while read -a TAB
+	do
+		if [ ${TAB[3]} == 0 ]; then
+			((COUNT++))
+		fi
+	done <data_tag_$VTAG.csv
+
+	MSG="arrêter"
+	if [ "$ACTION" = "Start" ]; then
+		MSG="démarrer"
+	fi
+
+	START=$(zenity --question --text "Ok pour $MSG $COUNT VMs?")
+	if [ $? != 0 ]; then
+		echo "Interruption"; exit 1
+	fi
+
+	exit 1 # temp
+
+	IFS=";";while read -a TAB
+	do
+		if [ ${TAB[3]} == 0 ]; then
+			node=${TAB[?]}
+			VMID=${TAB[?]}
+			if [ "$ACTION" = "Stop" ]; then
+				ApiCall POST "/api2/json/nodes/$NODE/qemu/$VMID/status/shutdown?forceStop=1"
+			else
+				ApiCall POST "/api2/json/nodes/$NODE/qemu/$VMID/status/start"
+			fi
+		fi
+	done <data_tag_$VTAG.csv
+}
+
 
 #================================================================
 function CreateVmSet()
@@ -571,7 +624,7 @@ do
 					echo "node ${TAB[0]}: machine ${TAB[2]}, id=${TAB[1]} est un template, pas de suppression"
 				else
 					echo "node ${TAB[0]}: suppression machine ${TAB[2]}, id=${TAB[1]}"
-					ApiCall DELETE "https://${APINODE}.${DOMAIN}:${PORT}/api2/json/nodes/${TAB[0]}/qemu/${TAB[1]}?node=${TAB[0]}&vmid=${TAB[1]}"
+					ApiCall DELETE "/api2/json/nodes/${TAB[0]}/qemu/${TAB[1]}?node=${TAB[0]}&vmid=${TAB[1]}"
 					((COMPT++))
 				fi
 			fi
@@ -748,7 +801,7 @@ mkdir -p /tmp/proxmox
 # TODO: bug, en cas de non réponse, pas de message d'erreur !!
 # test de la réponse de l'API
 echo "-Test de la réponse de l'API"
-ApiCall GET "https://${APINODE}.${DOMAIN}:${PORT}/api2/json/version"
+ApiCall GET "/api2/json/version"
 echo "-connection API: fonctionnelle!"
 
 # Associative array used to count tags
@@ -766,6 +819,7 @@ items=("Affichage Dashboard" \
 	"Liste VMs par tag" \
 	"Création VMs" \
 	"Suppression VMs par tag" \
+	"Start/Stop par tag" \
 	"Liste des users par groupe")
 
 while item=$(zenity --height=400 --width=300 --list \
@@ -783,7 +837,8 @@ do
 		"${items[2]}") ViewVmByTag;;
 		"${items[3]}") CreateVmSet; FetchData; ShowDashboard;;
 		"${items[4]}") DeleteVmByTag; FetchData; ShowDashboard;;
-		"${items[5]}") ViewGroups;;
+		"${items[5]}") StartStop;;
+		"${items[6]}") ViewGroups;;
 		*) echo "Ooops! Invalid option.";;
 	esac
 done
