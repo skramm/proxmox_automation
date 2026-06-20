@@ -806,7 +806,7 @@ VarCheck $REALM REALM
 VarCheck $PVUSER PVUSER
 VarCheck $APINODE APINODE
 VarCheck $DOMAIN DOMAIN
-VarCheck $PORT PORT
+if [ "$PORT" = "" ]; then PORT=8006; fi
 
 TODAY=$(date '+%Y%m%d_%H%M%S')
 CURLLOG=/tmp/proxmox/curl_$TODAY.log
