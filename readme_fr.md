@@ -9,8 +9,9 @@
 
 ## Pour qui?
 
-- vous êtes enseignant dans une structure d'enseignement, et vous avez besoin que vos étudiants aient accès à des VM déjà configurées, sur laquelles ils seront administrateurs, pour des TP réseaux, systèmes, etc...
-- vous et vos étudiants disposez d'un accès à un cluster Proxmox
+1. vous êtes enseignant dans une structure d'enseignement, et vous avez besoin que vos étudiants aient accès à des VM déjà configurées, sur laquelles ils seront administrateurs, pour des TP réseaux, systèmes, etc...
+2. vous et vos étudiants disposez d'un accès à un cluster Proxmox
+3. vos étudiants sont déjà inscrits dans le Proxmox (soit directement, soit par l'intermediaire d'une authentification centralisée), et regroupés en "groupes d'utilisateurs".
 
 => Alors cet outil est pour vous!
 
@@ -26,7 +27,7 @@ Nous disposons dans le département d'un hyperviseur "ProxMox", afin que les ét
 
 L'interface web native fournie est assez complète mais dans un cadre pédagogique, nous avons des besoins spécifiques qu'elle ne remplit pas.
 
-Pour des TP, nous avons besoin de pouvoir créer un ensemble de VM toutes identiques, typiquement une ou deux par étudiant, et basées sur un même "template".
+Pour des TP, nous avons besoin de pouvoir créer un ensemble de VM toutes identiques, typiquement une ou deux par étudiant, et basées sur un même "template", et auquel seul l'étudiant en question peut avoir accès.
 Avec l'interface web native, ceci est laborieux: ça implique de cloner les machines une par une, de les nommer, et leur assigner ensuite les permissions ("rôles").
 De plus, les VM à créer peuvent être différentes selon les TP, et certains TP peuvent nécessiter aussi de créer 2, voire 3 VM.
 
@@ -42,7 +43,7 @@ Et également les supprimer une fois les TP terminés.
 
 **Objectifs de ce programme**:  
 avoir un outil permettant de lister, créer/supprimer, démarrer/éteindre, etc.
-un ensemble de VM pour des TPs, en spécifiant les noms des machines et les tags associés.
+un ensemble de VM pour des TPs, et leur associer des tags permettant de la manipuler de façon globale.
 
 Pour les collègues de l'URN, une doc générale de type "tuto" sur l'utilisation de Proxmox dans le cadre du dept RT de l'IUT de Rouen est [accessible ici](https://gitlab.univ-rouen.fr/litis-kramm/RT_docs/-/blob/main/proxmox/tuto_proxmox.md)  
 (**note**: Implique d'avoir un compte URN et l'accès au gitlab via le CAS URN)
@@ -117,7 +118,7 @@ Si tout est bon, le lancement affiche l'ensemble des informations de façon synt
 
 ![dashboard1](img/dash1.png)
 
-On peut afficher la liste de VM et "templates" d'un node via "Liste VMs par node", qui indique également leur état (vert: en fonctionnement).
+On peut afficher la liste des VM et des "templates" d'un node via "Liste VMs par node", qui indique également leur état (vert: en fonctionnement, rouge: éteint).
 
 ![ListeVMparnode](img/listevmnode.png)
 
@@ -125,9 +126,30 @@ On peut afficher la liste de VM et "templates" d'un node via "Liste VMs par node
 
 #### Création d'un ensemble de machines
 
+**Note 1**: il faut avoir préalablement construit une machine fonctionnelle et la convertir en template.
+Ceci se fait depuis l'interface web et n'est pas pris en charge ici.
+
+**Note 2**: les machines seront clonées sur le même node que celui où se trouve le template.
+
+Les VM créées seront obligatoirement associées à un **groupe** d'utilisateurs:
+il y aura autant de clones créés que d'utilisateurs dans ce groupe.
+
+Il faut d'abord choisir le node choisi, puis le template.
+
+ICI IMAGE
+
+On donne ensuite un identifiant symbolique pour le nom du cours en question, par exemple `R123`.
+Les VM créées auront pour nom cette chaine suivie de l'identifiant de l'étudiant, tels qu'ils sont définis dans l'authentification.
+
+Par exemple: `R123-paul2ch`, `R123-faye7sim`, ...
+
+Attention: pas de underscore (`_`) dans les noms des VM.
+
+Si le TP demande deux VM par étudiant, il faudra répéter la procédure de création et il faudra donner deux identifiants différents.
+Par exemple `R123A` et `R123B`.
 
 
-#### Numérotation des clones
+**Numérotation des clones**
 
 Avec l'API, il n'y a pas génération automatique d'un ID (comme c'est le cas avec l'interface web), il faut en donner un dans la requete à l'API.
 Cet identifiant (entier) doit être unique sur tout le cluster.
@@ -142,9 +164,11 @@ YYDDDXXNN
 Avec:
 - `YY`: 2 derniers chiffres de l'année
 - `DDD`: jour de l'année (1 - 365 )
-- `XX`: un identifiant donné dans le script de création (00 à 99), et commun à l'ensemble des VM créées par le script
+- `XX`: un identifiant généré dans le script de création (00 à 99), et commun à l'ensemble des VM créées par la procédure de création.
 - `NN`: un identifiant de la machine parmi le lot, généré automatiquement lors de la création du lot (01 à 99)
 
+> [!CAUTION]
+> Cette solution implique que la taille des groupes d'étudiants ne peus pas dépasser 99.
 
 #### Suppression d'un ensemble de VM
 
@@ -168,8 +192,7 @@ Dans l'ordre:
 
 - Q: Pourquoi ne pas avoir construit ceci sous la forme d'une commande CLI?  
 R: L'idée était de faire quelque chose de facile et intuitif de prise en main, mais sans imposer de "framework" lourd, donc l'utilisation de zenity, assez courant dans les distrib contemporaines, semblait une bonne idée.
-Mais il y avait des alternatives, notamment [dialog](https://linux.die.net/man/1/dialog).
-
+Mais il y avait des alternatives, notamment [dialog](https://linux.die.net/man/1/dialog), mais plus complexe à mettre en oeuvre.
 Je suis parti sur `zenity`, mais il y a des limitations:
 pas de "checkbox" notamment, contrairement à `dialog`.
 
@@ -178,7 +201,7 @@ pas de "checkbox" notamment, contrairement à `dialog`.
 R: Aucune idée, mais je suis preneur de retours!
 
 - Q: Pourquoi des affichages en français?  
-R: L'idée initiale était de faciliter l'usage en interne (IUT/URN), mais à terme j'envisage une internationalisation
+R: L'idée initiale était de faciliter l'usage en interne (IUT Rouen/URN), mais à terme j'envisage une internationalisation
 (mais bon, c'est en bash, donc faut pas trop complexifier non plus...)
 
 

@@ -506,6 +506,13 @@ if [ $? != 0 ]; then
 fi
 echo "GROUPSEL=$GROUPSEL"
 
+# make sure the group size is not >99
+GRSIZE=$(wc -l <data_group_${GROUPSEL}.csv)
+if [ $GRSIZE -gt 99 ]; then
+	echo "Erreur, taille du groupe > 99";
+	exit 1
+fi
+
 zenity --question --text "Faut-il donner les droit sur ces VM à un autre groupe d'utilisateurs?"
 if [ $? = 0 ]; then
 	OTHERGROUP=$(zenity --list --text "Quel groupe d'utilisateurs?" --column="Groupe" ${GROUPARR[@]} )
@@ -566,13 +573,6 @@ do
 
 	echo " -Ajout des tags"
 	ApiCall POST "/api2/json/nodes/$BASENODE/qemu/$VMID/config?node=$BASENODE&vmid=$VMID&tags=$TAGS"
-#	response=$(curl -k \
-#		--silent -X POST \
-#		-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
-#		"https://${APINODE}.${DOMAIN}:${PORT}/api2/json/nodes/$BASENODE/qemu/$VMID/config?node=$BASENODE&vmid=$VMID&tags=$TAGS")
-#	err=$?
-#	CheckError
-
 
 	echo " -configuration permissions (roles)"
 # ref: https://pve.proxmox.com/pve-docs/api-viewer/#/access/acl
