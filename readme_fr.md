@@ -75,7 +75,7 @@ soit copier le fichier `pgvm` à un endroit référencé par le "path".
 ### Connection à l'API
 
 La connection à l'API implique d'avoir préalablement généré un "token API" via l'interface web de Proxmox.
-Une fois ce token obtenu, il faut le placer dans un fichier qui devra contenir les 7 définitions suivantes:
+Une fois ce token obtenu, il faut le placer dans un fichier qui devra contenir les 6 définitions suivantes:
 
 ```
 TOK_NAME=XXX
@@ -84,7 +84,6 @@ REALM=MYREALM
 PVUSER=ZZZZ
 APINODE=brandon
 DOMAIN=mydomain.org
-PORT=1234
 ```
 Remplacer `XXX` et `YYY` par nom et valeur du token généré,
 `mydomain.org` par votre domaine,
@@ -128,7 +127,7 @@ On peut afficher la liste de VM et "templates" d'un node via "Liste VMs par node
 
 
 
-### Numérotation des clones
+#### Numérotation des clones
 
 Avec l'API, il n'y a pas génération automatique d'un ID (comme c'est le cas avec l'interface web), il faut en donner un dans la requete à l'API.
 Cet identifiant (entier) doit être unique sur tout le cluster.
