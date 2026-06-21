@@ -3,6 +3,7 @@
 # name: pgvm ("Proxmox Gestion VM")
 # S. Kramm, URN, 2026
 # https://github.com/skramm/proxmox_automation
+# https://pve.proxmox.com/pve-docs/api-viewer/
 
 # TODO: ajouter fontionnalité de suppression VM par nom
 
@@ -12,6 +13,10 @@
 # TODO bug (parfois): une fois des machines avec un tag créer, quand on les supprime, le tag reste à une valeur incorrecte
 
 # TODO gérer les machines sans tag de façon plus claire
+
+
+# Disable interpretation of exclamation mark by the shell
+set +H
 
 if [ "$1" = "" ]
 then
@@ -156,6 +161,7 @@ function FetchData()
 	done <data_tags.csv
 
 # Generate a csv file for each tag, holding the node, the VMID, the name, type (Vm:0/T:1) (in that order)
+# The file holds the tags, because a machine can hold several tags so it may be useful to show all the tags assigned
 	IFS=";";while read -a TAG
 	do
 		while read -a ARR
@@ -168,7 +174,7 @@ function FetchData()
 				if [ "$i" = "$TAG" ]; then
 					fname=data_tag_$TAG
 #					if [ "$TAG" = " " ]; then fname=data_tag_NOTAG; fi
-					echo "${ARR[0]};${ARR[1]};${ARR[2]};${ARR[4]};${ARR[3]}" >>$fname.csv
+					echo "${ARR[0]};${ARR[1]};${ARR[2]};${ARR[4]};${ARR[3]};${ARR[5]}" >>$fname.csv
 				fi
 			done
 		done <data_node_ALL.csv
@@ -664,8 +670,8 @@ function ViewVmByTag()
 
 	if [ "$DEBUG" = "N" ]; then clear; fi
 	echo -e "\n-Liste des $(wc -l<data_tag_$VTAG.csv) machines ayant le tag '$VTAG':"
-	printf "| VM/T |      Node     |       Nom       |    VMId     |      Tags       |\n";
-	printf "|------+---------------+-----------------+-------------+-----------------|\n"
+	printf "| VM/T |      Node     |       Nom       |    VMId     |      Tags       || Stat |\n";
+	printf "|------+---------------+-----------------+-------------+-----------------++------|\n"
 
 	IFS=";";while read -a TAB
 	do
@@ -674,9 +680,16 @@ function ViewVmByTag()
 		else
 			printf "|  VM  |"
 		fi
-		printf " %-13s | %-15s | %11d | %15s |\n" ${TAB[0]} ${TAB[2]} ${TAB[1]} ${TAB[4]} 
+		printf " %-13s | %-15s | %11d | %15s ||  " ${TAB[0]} ${TAB[2]} ${TAB[1]} ${TAB[4]}
+		if [ "${TAB[5]}" = "running" ]; then
+			echo "🟢  |"
+		fi
+		if [ "${TAB[5]}" = "stopped" ]; then
+			echo "🔴  |"
+		fi
+		
 	done <data_tag_$VTAG.csv
-	printf "|------+---------------+-----------------+-------------+-----------------|\n"
+	printf "|------+---------------+-----------------+-------------+-----------------++------|\n"
 }
 
 
