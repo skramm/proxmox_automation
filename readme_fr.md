@@ -117,7 +117,7 @@ Il est recommandé de démarrer à partir d'un dossier vide parce que l'ensemble
 
 Si tout est bon, le lancement affiche l'ensemble des informations de façon synthétique dans la console, puis propose un menu ressemblant à ceci (ici nos nodes s'appellent `gerard`, `antonin` et `pierrick`):
 
-![dashboard1](img/dash1.png)
+![dashboard1](img/dash1.jpg)
 
 On note ici, dans l'ordre:
 - le nb de VM et template sur chaque node, aindi que le nombre de machines allumées, ainsi que le porcentage du stockage utilisé;
