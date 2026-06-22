@@ -120,7 +120,7 @@ function ProcessNode()
 
 
 #================================================================
-# Finds the ratio of local storage used
+# Finds the ratio of local storage used, called for every node
 function GetLocalStorage()
 {
 	ApiCall GET /api2/json/nodes/$1/storage
@@ -132,7 +132,13 @@ function GetLocalStorage()
 		if [ "${ARRSTO[0]}" = "local" ]; then
 			STOR_RATIO=${ARRSTO[1]}
 		fi
+		if [ "${ARRSTO[0]}" = "ceph-hdd" ] || [ "${ARRSTO[0]}" = "ceph-ssd" ]; then
+			echo "${ARRSTO[0]};${ARRSTO[1]}" >>/tmp/proxmox/data_storage_ceph.csv
+		fi
 	done </tmp/proxmox/storage_$1.csv
+
+# we only need the first 2, the others are redundant
+	head -n 2 /tmp/proxmox/data_storage_ceph.csv >data_storage_ceph.csv
 }
 
 #================================================================
@@ -153,6 +159,7 @@ function FetchData()
 	sort /tmp/proxmox/data_nodes.csv >/tmp/proxmox/data_nodes2.csv
 
 # add percentage of local storage used
+	rm data_storage_ceph.csv 2>/dev/null
 	rm data_node_$NODE.csv 2>/dev/null
 	while read NODE
 	do
@@ -876,6 +883,15 @@ declare -a TAGARR
 FetchData
 ShowDashboard
 
+# get ceph storage
+IFS=";"; while read -a STO
+do
+	if [ "${STO[0]}" = "ceph-ssd" ]; then STO_SSD=${STO[1]}; fi
+	if [ "${STO[0]}" = "ceph-hdd" ]; then STO_HDD=${STO[1]}; fi
+done <data_storage_ceph.csv
+CEPH_SSD=$(bc <<< $STO_SSD*100)
+CEPH_HDD=$(bc <<< $STO_HDD*100)
+
 items=("Affichage Dashboard" \
 	"Liste VMs par node" \
 	"Liste VMs par tag" \
@@ -884,9 +900,11 @@ items=("Affichage Dashboard" \
 	"Start/Stop par tag" \
 	"Liste des users par groupe")
 
+printf -v CEPH "Stockage ceph: hdd=%.2f%% ssd=%.2f%%" $CEPH_HDD $CEPH_SSD
+
 while item=$(zenity --height=400 --width=300 --list \
-	--title="Menu principal" \
-	--text="Choix" \
+	--title="Commandes" \
+	--text="$CEPH" \
 	--column="Options" "${items[@]}")
 do
 	if [ $? != 0 ]; then

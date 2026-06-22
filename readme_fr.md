@@ -69,6 +69,7 @@ soit copier le fichier `pgvm` à un endroit référencé par le "path".
 - `curl`
 - `zenity`
 - `jq`
+- `bc`
 
 (devraient être disponible par défaut dans votre distrib)
 
