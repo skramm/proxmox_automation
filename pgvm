@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+VERSION=20260622
 # name: pgvm ("Proxmox Gestion VM")
 # S. Kramm, URN, 2026
 # https://github.com/skramm/proxmox_automation
@@ -23,6 +24,7 @@ LC_NUMERIC=en_US.UTF-8
 
 if [ "$1" = "" ]
 then
+	echo "pgvm version $VERSION"
 	echo "Erreur, donner en argument le fichier de credentials permettant la connexion au cluster Proxmox"
 	exit 1
 fi
@@ -36,6 +38,8 @@ then
 fi
 source $TOKEN_FILE
 
+CEPH_SSD_NAME=ceph-ssd
+CEPH_HDD_NAME=ceph-hdd
 
 #================================================================
 function ApiCall()
@@ -132,7 +136,7 @@ function GetLocalStorage()
 		if [ "${ARRSTO[0]}" = "local" ]; then
 			STOR_RATIO=${ARRSTO[1]}
 		fi
-		if [ "${ARRSTO[0]}" = "ceph-hdd" ] || [ "${ARRSTO[0]}" = "ceph-ssd" ]; then
+		if [ "${ARRSTO[0]}" = "$CEPH_HDD_NAME" ] || [ "${ARRSTO[0]}" = "$CEPH_SSD_NAME" ]; then
 			echo "${ARRSTO[0]};${ARRSTO[1]}" >>/tmp/proxmox/data_storage_ceph.csv
 		fi
 	done </tmp/proxmox/storage_$1.csv
@@ -886,8 +890,8 @@ ShowDashboard
 # get ceph storage
 IFS=";"; while read -a STO
 do
-	if [ "${STO[0]}" = "ceph-ssd" ]; then STO_SSD=${STO[1]}; fi
-	if [ "${STO[0]}" = "ceph-hdd" ]; then STO_HDD=${STO[1]}; fi
+	if [ "${STO[0]}" = "$CEPH_SSD_NAME" ]; then STO_SSD=${STO[1]}; fi
+	if [ "${STO[0]}" = "$CEPH_HDD_NAME" ]; then STO_HDD=${STO[1]}; fi
 done <data_storage_ceph.csv
 CEPH_SSD=$(bc <<< $STO_SSD*100)
 CEPH_HDD=$(bc <<< $STO_HDD*100)

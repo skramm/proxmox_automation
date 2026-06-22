@@ -115,9 +115,21 @@ Il est recommandé de démarrer à partir d'un dossier vide parce que l'ensemble
 
 ### Fonctionnalités
 
-Si tout est bon, le lancement affiche l'ensemble des informations de façon synthétique dans la console, puis propose un menu:
+Si tout est bon, le lancement affiche l'ensemble des informations de façon synthétique dans la console, puis propose un menu ressemblant à ceci (ici nos nodes s'appellent `gerard`, `antonin` et `pierrick`):
 
 ![dashboard1](img/dash1.png)
+
+On note ici, dans l'ordre:
+- le nb de VM et template sur chaque node, aindi que le nombre de machines allumées, ainsi que le porcentage du stockage utilisé;
+- les templates disponibles pour fabriquer des clones;
+- la liste des tags existants (oui, je fais des expérimentations...)
+- la liste des groupes d'utilisateurs, ainsi que l'effectif de chaque groupe.
+A noter qu'un utilisateur pourrait se trouver dans plusieurs groupes, ce qui fait qu'on pourrait avoir un total de l'effectif des groupes différents du nombre total d'utilisateurs (pas le cas ici).
+
+On voit aussi le menu principal (dialogue via zenity) qui propose différentes options.
+On peut noter dans le dialogue l'affichage du taux d'occupation du stockage ceph
+(nous avons une structure mixte SSD + HDD).
+
 
 On peut afficher la liste des VM et des "templates" d'un node via "Liste VMs par node", qui indique également leur état (vert: en fonctionnement, rouge: éteint).
 
