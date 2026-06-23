@@ -19,7 +19,7 @@ VERSION=20260623
 # Disable interpretation of exclamation mark by the shell
 set +H
 
-# needed for computation, because Proxmox numerical data comes with a dot as decimel separator
+# needed for computation, because Proxmox numerical data comes with a dot as decimal separator
 LC_NUMERIC=en_US.UTF-8
 
 if [ "$1" = "" ]
@@ -38,6 +38,7 @@ then
 fi
 source $TOKEN_FILE
 
+# fix this in case your storage has different names
 CEPH_SSD_NAME=ceph-ssd
 CEPH_HDD_NAME=ceph-hdd
 

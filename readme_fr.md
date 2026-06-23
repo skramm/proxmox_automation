@@ -20,6 +20,8 @@
 
 - bug: lors de la création par clonage, le template se voit affecté des tags?
 - ajouter vérification que le vmid ne correspond pas à un numéro déja existant
+- bug: ajout de permissions d'un autre groupe au set de VM créée: pas fonctionnel
+- feature: ajout d'une commande de migration d'un jeu de VM sur un autre node => ?
 
 ## Introduction
 
@@ -120,9 +122,9 @@ Si tout est bon, le lancement affiche l'ensemble des informations de façon synt
 ![dashboard1](img/dash1.jpg)
 
 On note ici, dans l'ordre:
-- le nb de VM et template sur chaque node, aindi que le nombre de machines allumées, ainsi que le porcentage du stockage utilisé;
+- le nb de VM et template sur chaque node, ainsi que le nombre de machines allumées, ainsi que le pourcentage du stockage local utilisé;
 - les templates disponibles pour fabriquer des clones;
-- la liste des tags existants (oui, je fais des expérimentations...)
+- la liste des tags existants (oui, je fais des expérimentations...);
 - la liste des groupes d'utilisateurs, ainsi que l'effectif de chaque groupe.
 A noter qu'un utilisateur pourrait se trouver dans plusieurs groupes, ce qui fait qu'on pourrait avoir un total de l'effectif des groupes différents du nombre total d'utilisateurs (pas le cas ici).
 
@@ -144,6 +146,8 @@ On peut afficher la liste des VM et des "templates" d'un node via "Liste VMs par
 Ceci se fait depuis l'interface web et n'est pas pris en charge ici.
 
 **Note 2**: les machines seront clonées sur le même node que celui où se trouve le template.
+
+**Note 3**: les VM sont par défaut des "_linked clone_", donc liées à un template.
 
 Les VM créées seront obligatoirement associées à un **groupe** d'utilisateurs:
 il y aura autant de clones créés que d'utilisateurs dans ce groupe.
@@ -182,7 +186,7 @@ Avec:
 - `NN`: un identifiant de la machine parmi le lot, généré automatiquement lors de la création du lot (01 à 99)
 
 > [!CAUTION]
-> Cette solution implique que la taille des groupes d'étudiants ne peus pas dépasser 99.
+> Cette solution implique que la taille des groupes d'étudiants ne peut pas dépasser 99.
 
 #### Suppression d'un ensemble de VM
 
