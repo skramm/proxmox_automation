@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-VERSION=20260622
+VERSION=20260623	
 # name: pgvm ("Proxmox Gestion VM")
 # S. Kramm, URN, 2026
 # https://github.com/skramm/proxmox_automation
@@ -397,7 +397,9 @@ function StartStop()
 	IFS=";";while read -a TAB
 	do
 		if [ ${TAB[3]} == 0 ]; then
-			((COUNT++))
+			if [ "${TAB[5]}" == "running" ]; then
+				((COUNT++))
+			fi
 		fi
 	done <data_tag_$VTAG.csv
 
@@ -411,8 +413,6 @@ function StartStop()
 		echo "Interruption"; exit 1
 	fi
 
-#	exit 1 # temp
-
 	IFS=";";while read -a TAB
 	do
 		if [ ${TAB[3]} == 0 ]; then
@@ -420,12 +420,12 @@ function StartStop()
 			VMID=${TAB[1]}
 #			set -x
 			if [ "$ACTION" = "Stop" ]; then
+				echo "Arret de la VM n°$VMID"
 				ApiCall POST "/api2/json/nodes/$NODE/qemu/$VMID/status/shutdown?forceStop=1"
 			else
+				echo "Démarrage de la VM n°$VMID"
 				ApiCall POST "/api2/json/nodes/$NODE/qemu/$VMID/status/start"
 			fi
-#			set +x
-			echo "resp=$response"
 		fi
 	done <data_tag_$VTAG.csv
 }

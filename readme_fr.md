@@ -131,9 +131,10 @@ On peut noter dans le dialogue l'affichage du taux d'occupation du stockage ceph
 (nous avons une structure mixte SSD + HDD).
 
 
-On peut afficher la liste des VM et des "templates" d'un node via "Liste VMs par node", qui indique également leur état (vert: en fonctionnement, rouge: éteint).
+On peut afficher la liste des VM et des "templates" d'un node via "Liste VMs par node", qui indique également leur état
+(vert: en fonctionnement, rouge: éteint).
 
-![ListeVMparnode](img/listevmnode.png)
+![ListeVMparnode](img/list_vm_node.jpg)
 
 
 
