@@ -154,11 +154,10 @@ Ceci se fait depuis l'interface web et n'est pas pris en charge ici.
 Les VM créées seront obligatoirement associées à un **groupe** d'utilisateurs:
 il y aura autant de clones créés que d'utilisateurs dans ce groupe.
 
-Il faut d'abord choisir le node choisi, puis le template.
+Une suit e de dialogues s'affichent: il faut choisir le node choisi, puis le template, donner ensuite l'identifiant du cours (utilisé pour construire le nom des VMs), par exemple `R123`, et donner les tags à associer à ces VMs.
 
-ICI IMAGE
+![dialogues](img/menus_pgvm_800.jpg)
 
-On donne ensuite un identifiant symbolique pour le nom du cours en question, par exemple `R123`.
 Les VM créées auront pour nom cette chaine suivie de l'identifiant de l'étudiant, tels qu'ils sont définis dans l'authentification.
 
 Par exemple: `R123-paul2ch`, `R123-faye7sim`, ...
@@ -185,7 +184,7 @@ Avec:
 - `YY`: 2 derniers chiffres de l'année
 - `DDD`: jour de l'année (1 - 365 )
 - `XX`: un identifiant généré de façon aléatoire (00 à 99), et commun à l'ensemble des VM créées lors de la procédure de création.
-Si le numéro global (`YYDDDXX01`) est déjà utilisé par une VM, un autre est généré.
+Si le numéro global (`YYDDDXX01`) est déjà utilisé par une VM, un autre id pour `XX` est généré.
 - `NN`: un identifiant de la machine parmi le lot, généré automatiquement lors de la création du lot (01 à 99)
 
 > [!CAUTION]
