@@ -72,6 +72,8 @@ soit copier le fichier `pgvm` à un endroit référencé par le "path".
 - `zenity`
 - `jq`
 - `bc`
+- `shuf`
+
 
 (devraient être disponible par défaut dans votre distrib)
 
@@ -182,7 +184,8 @@ YYDDDXXNN
 Avec:
 - `YY`: 2 derniers chiffres de l'année
 - `DDD`: jour de l'année (1 - 365 )
-- `XX`: un identifiant généré dans le script de création (00 à 99), et commun à l'ensemble des VM créées par la procédure de création.
+- `XX`: un identifiant généré de façon aléatoire (00 à 99), et commun à l'ensemble des VM créées lors de la procédure de création.
+Si le numéro global (`YYDDDXX01`) est déjà utilisé par une VM, un autre est généré.
 - `NN`: un identifiant de la machine parmi le lot, généré automatiquement lors de la création du lot (01 à 99)
 
 > [!CAUTION]

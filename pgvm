@@ -523,24 +523,27 @@ do
 	fi
 done
 
+# Generate a 2 character random id for the VmId
+YEARDAY=$(date '+%y%j')
 DONE=NO
+NUMID=00
 while [ $DONE = NO ]
 do
-	ID=$(zenity --entry --text "Donner l'identifiant commun à ce set de VM, entre 00 et 99\n(ne doit pas déja exister)")
-	if [ $? != 0 ]; then
-		echo "Interruption"; exit 1
-	fi
-	echo "ID=$ID"
-
-	if ! [ 2 = ${#ID} ]
-	then
-		echo "Erreur, l'identifiant doit être entre 00 et 99"
-#		exit 1
-	else
+	N1=$(shuf -i 0-99 -n 1)
+	NUMID=$N1
+	if [ 1 = ${#N1} ]; then NUMID="0$N1";fi
+	VMID=${YEARDAY}${NUMID}01
+	NOGOOD=false
+	IFS=";"; while read -a ARR
+	do
+		if [ ${ARR[1]} = $VMID ]; then
+			NOGOOD=true
+		fi
+	done <data_node_ALL.csv
+	if [ $NOGOOD = false ]; then
 		DONE=YES
 	fi
 done
-
 
 # create an array holding the group names, just for the zenity call below
 unset GROUPARR
@@ -588,7 +591,7 @@ if [ $? != 0 ]; then
 	echo "Interruption"; exit 1
 fi
 
-YEARDAY=$(date '+%y%j')
+
 TODAY=$(date '+%Y%m%d_%H%M%S')
 NUMA=1
 
@@ -856,6 +859,9 @@ function VarCheck()
 ToolCheck curl
 ToolCheck jq
 ToolCheck zenity
+ToolCheck shuf
+ToolCheck bc
+
 
 # Check that these variables are not empty
 VarCheck $TOK_VALUE TOK_VALUE
