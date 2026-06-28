@@ -19,7 +19,6 @@
 ## TODO:
 
 - bug: lors de la création par clonage, le template se voit affecté des tags?
-- ajouter vérification que le vmid ne correspond pas à un numéro déja existant
 - bug: ajout de permissions d'un autre groupe au set de VM créée: pas fonctionnel
 - feature: ajout d'une commande de migration d'un jeu de VM sur un autre node => ?
 

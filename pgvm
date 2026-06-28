@@ -11,7 +11,7 @@ VERSION=20260623
 # TODO: ajouter possibilité d'ajouter un groupe aux permissions
 
 # TODO dashboard tag: ajouter colonnes indiquant nbe T et VM, et Nb ON/OFF
-# TODO bug (parfois): une fois des machines avec un tag créer, quand on les supprime, le tag reste à une valeur incorrecte
+# TODO bug (parfois): une fois des machines avec un tag créées, quand on les supprime, le tag reste à une valeur incorrecte
 
 # TODO gérer les machines sans tag de façon plus claire
 
@@ -79,9 +79,15 @@ function ApiCall()
 function ProcessNode()
 {
 	if [ "$DEBUG" = "Y" ]; then echo "ProcessNode(): $1"; fi
-	
+
+# get CPU load of each node
+# !!!!!!!! WIP !!!!!!!!!
+#	ApiCall GET /api2/json/nodes
+#	jq -r '.data[]' <<< "$response" >/tmp/proxmox/node_$1_load.json 2>>$CURLLOG 
+
+
 	ApiCall GET "/api2/json/nodes/$1/qemu?full=1"
-	jq -r '.data[]' <<< "$response" >/tmp/proxmox/node_$1.json 2>>$CURLLOG 
+	jq -r '.data[]' <<< "$response" >/tmp/proxmox/node_$1.json 2>>$CURLLOG
 
 # we use the '_' character to separate fields because in the json file, multiple tags are separated with ';'
 # (and '_' is not allowed in the VM name field)
@@ -164,8 +170,8 @@ function FetchData()
 	sort /tmp/proxmox/data_nodes.csv >/tmp/proxmox/data_nodes2.csv
 
 # add percentage of local storage used
-	rm data_storage_ceph.csv 2>/dev/null
-	rm data_node_$NODE.csv 2>/dev/null
+#	rm data_storage_ceph.csv 2>/dev/null
+#	rm data_node_$NODE.csv 2>/dev/null
 	while read NODE
 	do
 		GetLocalStorage $NODE
