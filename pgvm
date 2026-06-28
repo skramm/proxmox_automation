@@ -80,12 +80,6 @@ function ProcessNode()
 {
 	if [ "$DEBUG" = "Y" ]; then echo "ProcessNode(): $1"; fi
 
-# get CPU load of each node
-# !!!!!!!! WIP !!!!!!!!!
-#	ApiCall GET /api2/json/nodes
-#	jq -r '.data[]' <<< "$response" >/tmp/proxmox/node_$1_load.json 2>>$CURLLOG 
-
-
 	ApiCall GET "/api2/json/nodes/$1/qemu?full=1"
 	jq -r '.data[]' <<< "$response" >/tmp/proxmox/node_$1.json 2>>$CURLLOG
 
@@ -153,6 +147,21 @@ function GetLocalStorage()
 }
 
 #================================================================
+# Called for every node
+function GetCPULoad()
+{
+	IFS=";";while read -a ARRLOAD
+	do
+		if [ "${ARRLOAD[0]}" = "$1" ]; then
+			CPULOAD=${ARRLOAD[1]}
+		fi
+	done </tmp/proxmox/node_load.csv
+	CPULOAD=$(bc <<< $CPULOAD*100) 
+	
+#	echo "GetCPULoad(): CPULOAD=$CPULOAD"
+}
+
+#================================================================
 # Fetch all the data
 # This function does not print anything
 function FetchData()
@@ -169,13 +178,17 @@ function FetchData()
 	jq  -r '.data[] | .node' <<<"$response" >/tmp/proxmox/data_nodes.csv 2>>$CURLLOG
 	sort /tmp/proxmox/data_nodes.csv >/tmp/proxmox/data_nodes2.csv
 
+# get CPU load of each node
+	jq -r '.data[] | (.node + ";" + (.cpu|tostring) + ";" + (.mem|tostring) + ";" + (.maxmem|tostring))' <<< "$response" >/tmp/proxmox/node_load.csv
+
 # add percentage of local storage used
 #	rm data_storage_ceph.csv 2>/dev/null
 #	rm data_node_$NODE.csv 2>/dev/null
 	while read NODE
 	do
 		GetLocalStorage $NODE
-		printf "%s;%.3f\n" $NODE $STOR_RATIO >>data_nodes.csv
+		GetCPULoad $NODE
+		printf "%s;%.3f;%.3f\n" $NODE $STOR_RATIO $CPULOAD >>data_nodes.csv
 	done </tmp/proxmox/data_nodes2.csv
 
 # Main API loop, iterate on all nodes and collect all the nodes data
@@ -260,8 +273,8 @@ function FetchData()
 #================================================================
 function ShowNodes()
 {
-	echo "|    Node    | #VM | #Templ. |  Tot  ||  ON | OFF || %storage |"
-	echo "|------------+-----+---------+-------++-----+-----++----------|"
+	echo "|    Node    | #VM | #Templ. |  Tot  ||  ON | OFF || %storage |  %CPU  |"
+	echo "|------------+-----+---------+-------++-----+-----++----------+--------|"
 
 	TOTVM=0
 	TOTT=0
@@ -282,20 +295,21 @@ function ShowNodes()
 		fi	
 		((NBVM=NBTOT-NBT))
 		IFSOLD=$IFS
-		IFS=";"; while read -a ARR
+		IFS=";"; while read -a ARR2
 		do
-			if [ "${ARR[3]}" = "0" ]; then
-				if [ "${ARR[4]}" = "running" ]; then
+			if [ "${ARR2[3]}" = "0" ]; then
+				if [ "${ARR2[4]}" = "running" ]; then
 					((NBON++))
 				fi
-				if [ "${ARR[4]}" = "stopped" ]; then
+				if [ "${ARR2[4]}" = "stopped" ]; then
 					((NBOFF++))
 				fi
 			fi
 		done <data_node_$NODE.csv
 		IFS=$IFSOLD
 		STOR2=$(bc <<< $STOR*100)
-		printf "| %10s | %3d | %7d | %5d || %3d | %3d ||   %5.1f%% |\n" $NODE $NBVM $NBT $NBTOT $NBON $NBOFF $STOR2
+		CPULOAD=${ARR[2]}
+		printf "| %10s | %3d | %7d | %5d || %3d | %3d ||   %5.1f%% | %3.3f%% | \n" $NODE $NBVM $NBT $NBTOT $NBON $NBOFF $STOR2 $CPULOAD
 		((TOTVM+=NBVM))
 		((TOTT+=NBT))
 		((TOTALL+=NBTOT))
@@ -303,7 +317,7 @@ function ShowNodes()
 		((TOTOFF+=NBOFF))
 	done < data_nodes.csv
 
-	echo "|------------+-----+---------+-------++-----+-----++----------|"
+	echo "|------------+-----+---------+-------++-----+-----++----------+--------|"
 	printf "      Totaux | %3d | %7d | %5d || %3d | %3d ||\n" $TOTVM $TOTT $TOTALL $TOTON $TOTOFF
 }
 
