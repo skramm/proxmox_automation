@@ -6,7 +6,7 @@ VERSION=20260623
 # https://github.com/skramm/proxmox_automation
 # https://pve.proxmox.com/pve-docs/api-viewer/
 
-# TODO: ajouter fontionnalité de suppression VM par nom
+# TODO: ajouter fonctionnalité de suppression VM par nom
 
 # TODO: ajouter possibilité d'ajouter un groupe aux permissions
 

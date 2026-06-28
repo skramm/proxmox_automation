@@ -1,6 +1,6 @@
 # pgvm: Programme de Gestion de VM
 
-- Auteur: S. Kramm, IUT RT Rouen
+- Auteur: Sebastien Kramm, IUT RT Rouen
 - Date: 2026/06
 - Statut: alpha
 - Licence: ???
@@ -10,7 +10,7 @@
 ## Pour qui?
 
 1. vous êtes enseignant dans une structure d'enseignement, et vous avez besoin que vos étudiants aient accès à des VM déjà configurées, sur laquelles ils seront administrateurs, pour des TP réseaux, systèmes, etc...
-2. vous et vos étudiants disposez d'un accès à un cluster Proxmox
+2. vous et vos étudiants disposez d'un accès à un cluster Proxmox, dont le stockage distribué est géré en [ceph](https://fr.wikipedia.org/wiki/Ceph).
 3. vos étudiants sont déjà inscrits dans le Proxmox (soit directement, soit par l'intermediaire d'une authentification centralisée), et regroupés en "groupes d'utilisateurs".
 
 => Alors cet outil est pour vous!
@@ -25,9 +25,9 @@
 
 ## Introduction
 
-Nous disposons dans le département d'un hyperviseur "ProxMox", afin que les étudiants puisse disposer de VM pour des TP.
+Nous disposons dans le département d'un hyperviseur "ProxMox", afin que les étudiants puissent disposer de VM pour des TP.
 
-L'interface web native fournie est assez complète mais dans un cadre pédagogique, nous avons des besoins spécifiques qu'elle ne remplit pas.
+L'interface web native est assez complète mais dans un cadre pédagogique, nous avons des besoins spécifiques qu'elle ne remplit pas.
 
 Pour des TP, nous avons besoin de pouvoir créer un ensemble de VM toutes identiques, typiquement une ou deux par étudiant, et basées sur un même "template", et auquel seul l'étudiant en question peut avoir accès.
 Avec l'interface web native, ceci est laborieux: ça implique de cloner les machines une par une, de les nommer, et leur assigner ensuite les permissions ("rôles").
@@ -38,7 +38,7 @@ Il n'est donc pas envisageable d'utiliser pour cela l'interface web native.
 D'autres solutions auraient pu être utilisées (probablement des outils comme Terraform?), l'approche utilisée ici a consisté à utiliser l'API HTTP directement, via `curl` depuis un script bash qui va itérer la création des clones.
 
 L'outil peut aussi être vu comme une supervision, il affiche le nombre de VM et de template par node, ainsi que le nombre de machines allumées et éteintes.
-Il peut aussi en une commande allumer ou éteindre un ensemble de machines identifiées via une tag, indépendamment de leur localisation sur un "node".
+Il peut aussi en une commande allumer ou éteindre un ensemble de machines identifiées via un tag, indépendamment de leur localisation sur un nœud.
 Et également les supprimer une fois les TP terminés.
 
 
@@ -74,8 +74,7 @@ soit copier le fichier `pgvm` à un endroit référencé par le "path".
 - `bc`
 - `shuf`
 
-
-(devraient être disponible par défaut dans votre distrib)
+Tout ceci est probablement déjà disponible par défaut dans votre distrib, et de tout façon leur présence est testée au démarrage.
 
 
 ### Connection à l'API
@@ -154,7 +153,8 @@ Ceci se fait depuis l'interface web et n'est pas pris en charge ici.
 Les VM créées seront obligatoirement associées à un **groupe** d'utilisateurs:
 il y aura autant de clones créés que d'utilisateurs dans ce groupe.
 
-Une suit e de dialogues s'affichent: il faut choisir le node choisi, puis le template, donner ensuite l'identifiant du cours (utilisé pour construire le nom des VMs), par exemple `R123`, et donner les tags à associer à ces VMs.
+Une suite de dialogues s'affichent:
+il faut choisir le node choisi, puis le template, donner ensuite l'identifiant du cours (utilisé pour construire le nom des VMs), par exemple `R123`, et donner les tags à associer à ces VMs.
 
 ![dialogues](img/menus_pgvm_800.jpg)
 
@@ -162,7 +162,7 @@ Les VM créées auront pour nom cette chaine suivie de l'identifiant de l'étudi
 
 Par exemple: `R123-paul2ch`, `R123-faye7sim`, ...
 
-Attention: pas de underscore (`_`) dans les noms des VM.
+Attention: pas de caractère underscore (`_`) dans les noms des VM.
 
 Si le TP demande deux VM par étudiant, il faudra répéter la procédure de création et il faudra donner deux identifiants différents.
 Par exemple `R123A` et `R123B`.
@@ -182,7 +182,7 @@ YYDDDXXNN
 ```
 Avec:
 - `YY`: 2 derniers chiffres de l'année
-- `DDD`: jour de l'année (1 - 365 )
+- `DDD`: jour de l'année (1 - 365)
 - `XX`: un identifiant généré de façon aléatoire (00 à 99), et commun à l'ensemble des VM créées lors de la procédure de création.
 Si le numéro global (`YYDDDXX01`) est déjà utilisé par une VM, un autre id pour `XX` est généré.
 - `NN`: un identifiant de la machine parmi le lot, généré automatiquement lors de la création du lot (01 à 99)
@@ -216,6 +216,8 @@ Mais il y avait des alternatives, notamment [dialog](https://linux.die.net/man/1
 Je suis parti sur `zenity`, mais il y a des limitations:
 pas de "checkbox" notamment, contrairement à `dialog`.
 
+- Q: pourquoi ne pas avoir fait ça en Python? C'est plutot plus performant et souple.  
+R:  Je suis plus à l'aise en Bash qu'en Python, c'est la seule raison.
 
 - Q: Est-ce que ceci est utilisable sous Windows avec WSL?  
 R: Aucune idée, mais je suis preneur de retours!
@@ -223,6 +225,9 @@ R: Aucune idée, mais je suis preneur de retours!
 - Q: Pourquoi des affichages en français?  
 R: L'idée initiale était de faciliter l'usage en interne (IUT Rouen/URN), mais à terme j'envisage une internationalisation
 (mais bon, c'est en bash, donc faut pas trop complexifier non plus...)
+
+- Q: bizarre, le nom, non?  
+R: oui, j'ai pas trouvé mieux...
 
 
 
