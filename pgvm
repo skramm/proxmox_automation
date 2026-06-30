@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-VERSION=20260623	
+VERSION=20260630
 # name: pgvm ("Proxmox Gestion VM")
 # S. Kramm, URN, 2026
 # https://github.com/skramm/proxmox_automation
@@ -15,6 +15,7 @@ VERSION=20260623
 
 # TODO gérer les machines sans tag de façon plus claire
 
+# TODO: ajouter option lors de la création de machines pour distribuer les VM sur les (3) noeuds
 
 # Disable interpretation of exclamation mark by the shell
 set +H
@@ -128,7 +129,9 @@ function ProcessNode()
 # Finds the ratio of local storage used, called for every node
 function GetLocalStorage()
 {
+	if [ "$DEBUG" = "Y" ]; then echo "GetLocalStorage() node=$1"; fi
 	ApiCall GET /api2/json/nodes/$1/storage
+#	echo "response=$response"
 	jq '.data[]' <<<$response >/tmp/proxmox/storage_$1.json
 
 	jq -r '.storage + ";"+ (.used_fraction|tostring)' /tmp/proxmox/storage_$1.json >/tmp/proxmox/storage_$1.csv
@@ -150,6 +153,8 @@ function GetLocalStorage()
 # Called for every node
 function GetCPULoad()
 {
+	if [ "$DEBUG" = "Y" ]; then echo "GetCPULoad() node=$1"; fi
+
 	IFS=";";while read -a ARRLOAD
 	do
 		if [ "${ARRLOAD[0]}" = "$1" ]; then
