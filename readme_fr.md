@@ -40,6 +40,7 @@ L'outil peut aussi être vu comme une supervision, il affiche le nombre de VM et
 Il peut aussi en une commande allumer ou éteindre un ensemble de machines identifiées via un tag, indépendamment de leur localisation sur un nœud.
 Et également les supprimer une fois les TP terminés.
 
+Son utilisation implique que l'utilisateur aie un certain nombre de privilèges, en particulier `Sys.Audit`.
 
 
 **Objectifs de ce programme**:  
