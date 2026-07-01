@@ -9,9 +9,10 @@
 
 ## Pour qui?
 
-1. vous êtes enseignant dans une structure d'enseignement, et vous avez besoin que vos étudiants aient accès à des VM déjà configurées, sur laquelles ils seront administrateurs, pour des TP réseaux, systèmes, etc...
-2. vous et vos étudiants disposez d'un accès à un cluster Proxmox, dont le stockage distribué est géré en [ceph](https://fr.wikipedia.org/wiki/Ceph).
+1. vous êtes enseignant dans une structure d'enseignement, et vous avez besoin que vos étudiants aient accès à des VM déjà configurées, toutes identiques, sur laquelles ils seront administrateurs, pour des TP réseaux, système, etc...
+2. vous et vos étudiants disposez d'un accès à un cluster Proxmox, avec éventuellement un stockage distribué en [ceph](https://fr.wikipedia.org/wiki/Ceph).
 3. vos étudiants sont déjà inscrits dans le Proxmox (soit directement, soit par l'intermediaire d'une authentification centralisée), et regroupés en "groupes d'utilisateurs".
+4. vous disposez des privilèges nécessaires sur le Proxmox
 
 => Alors cet outil est pour vous!
 
@@ -20,7 +21,8 @@
 
 - bug: lors de la création par clonage, le template se voit affecté des tags?
 - bug: ajout de permissions d'un autre groupe au set de VM créée: pas fonctionnel
-- feature: ajout d'une commande de migration d'un jeu de VM sur un autre node => ?
+- feature: lors de la création d'un ensemble de VM, prévoir la création distribuée sur les différents nodes (via migration a posteriori?)
+- feature: prevoir la possibilité d'archivage des VM depuis le stockage SSD vers le stockage HDD.
 
 ## Introduction
 
