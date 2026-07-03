@@ -2,7 +2,7 @@
 
 - Auteur: Sebastien Kramm, IUT RT Rouen
 - Date: 2026/06
-- Statut: alpha
+- Statut: alpha, pas de release stable à ce jour
 - Licence: ???
 - Home: https://github.com/skramm/proxmox_automation
 
