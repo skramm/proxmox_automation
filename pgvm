@@ -6,7 +6,6 @@ VERSION=20260630
 # https://github.com/skramm/proxmox_automation
 # https://pve.proxmox.com/pve-docs/api-viewer/
 
-# TODO: ajouter fonctionnalité de suppression VM par nom
 
 # TODO: ajouter possibilité d'ajouter un groupe aux permissions
 
@@ -14,8 +13,14 @@ VERSION=20260630
 # TODO bug (parfois): une fois des machines avec un tag créées, quand on les supprime, le tag reste à une valeur incorrecte
 
 # TODO gérer les machines sans tag de façon plus claire
+# ou MIEUX: interdire la création de machine sans tag, ou alors si l'utilisateur ne donne pas de tag, en générer
+# un arbitraitement (genre initiales + YYMMDD ?)
 
 # TODO: ajouter option lors de la création de machines pour distribuer les VM sur les (3) noeuds
+# en pratique, elles sont toute créées sur le même node, il faut enuite faire une migration
+
+# TODO ajouter une visualisation des taches en cours (utilie dans le cas de migration en masse)
+# voir https://pve.proxmox.com/pve-docs/api-viewer/#/nodes/{node}/tasks
 
 # Disable interpretation of exclamation mark by the shell
 set +H
@@ -82,11 +87,11 @@ function ProcessNode()
 	if [ "$DEBUG" = "Y" ]; then echo "ProcessNode(): $1"; fi
 
 	ApiCall GET "/api2/json/nodes/$1/qemu?full=1"
-	jq -r '.data[]' <<< "$response" >/tmp/proxmox/node_$1.json 2>>$CURLLOG
+	jq -r '.data[]' <<< "$response" >/tmp/proxmox/node_$1.json
 
 # we use the '_' character to separate fields because in the json file, multiple tags are separated with ';'
 # (and '_' is not allowed in the VM name field)
-	jq -r '(.vmid|tostring) + "_" + .name + "_" + .tags + "_" + (.template|tostring) + "_" + .status' < /tmp/proxmox/node_$1.json >/tmp/proxmox/node_$1.csv
+	jq -r '(.vmid|tostring) + "_" + .name + "_" + .tags + "_" + (.template|tostring) + "_" + .status' </tmp/proxmox/node_$1.json >/tmp/proxmox/node_$1.csv
 
 # replace null by 0 (machine is not a template), just to make it prettier
 	sed -i -e 's/_null/_0/g' /tmp/proxmox/node_$1.csv
@@ -98,15 +103,43 @@ function ProcessNode()
 	sed -i -e 's/_/;/g' /tmp/proxmox/node_$1.csv
 
 # sort by name
-	sort --key=1 /tmp/proxmox/node_$1.csv >data_node_$1.csv
-	
-# Add node name on each line, first position
-	IFS=";";while read line;
+	sort --key=1 /tmp/proxmox/node_$1.csv >/tmp/proxmox/data_node2_$1.csv
+
+# Add type and disk config
+	IFS=";"; while read -a VM
 	do
-		echo "$1;${line}" >> data_node_ALL.csv
+		ID=${VM[0]}
+		ApiCall GET "/api2/json/nodes/$1/qemu/$ID/config"
+		DISK=$(jq -r '.data.scsi0' <<< "$response")
+#		echo "DISK=$DISK"
+		IFS=","; while read -a ARR2
+		do
+			D1=${ARR2[0]}
+#			echo "D1=$D1"
+			IFS=":"; while read -a ARR3
+			do
+				echo -n "${VM[0]};${VM[1]};${VM[2]};${VM[3]};${VM[4]};" >>data_node_$1.csv
+				if [ ${ARR3[0]} = $CEPH_HDD_NAME ]; then
+					echo "HDD" >>data_node_$1.csv
+				else
+					if [ ${ARR3[0]} = $CEPH_SSD_NAME ]; then
+						echo "SSD" >>data_node_$1.csv
+					else
+						echo "???" >>data_node_$1.csv
+					fi
+				fi
+			done <<< $D1; IFS=","
+		done <<<$DISK; IFS=";"
+	done </tmp/proxmox/data_node2_$1.csv
+
+	
+# Add node name on each line of global file, first position
+	IFS=";"; while read line;
+	do
+		echo "$1;${line}" >>data_node_ALL.csv
  	done < data_node_$1.csv
 
-	IFS=";";while read -a ARR
+	IFS=";"; while read -a ARR
 	do
 # comptage du nb d'occurrence pour chaque tag
 # TODO: supprimer quand on aura les csv par tag
@@ -135,7 +168,7 @@ function GetLocalStorage()
 	jq '.data[]' <<<$response >/tmp/proxmox/storage_$1.json
 
 	jq -r '.storage + ";"+ (.used_fraction|tostring)' /tmp/proxmox/storage_$1.json >/tmp/proxmox/storage_$1.csv
-	IFS=";";while read -a ARRSTO
+	IFS=";"; while read -a ARRSTO
 	do
 		if [ "${ARRSTO[0]}" = "local" ]; then
 			STOR_RATIO=${ARRSTO[1]}
@@ -155,7 +188,7 @@ function GetCPULoad()
 {
 	if [ "$DEBUG" = "Y" ]; then echo "GetCPULoad() node=$1"; fi
 
-	IFS=";";while read -a ARRLOAD
+	IFS=";"; while read -a ARRLOAD
 	do
 		if [ "${ARRLOAD[0]}" = "$1" ]; then
 			CPULOAD=${ARRLOAD[1]}
@@ -174,7 +207,7 @@ function FetchData()
 	if [ "$DEBUG" = "Y" ]; then echo "FetchData()"; fi
 
 # clean out old data
-	rm /tmp/proxmox/tags.csv 2>/dev/null
+	rm /tmp/proxmox/* 2>/dev/null
 	rm data_* 2>/dev/null
 	TAGAARR=()
 	
@@ -187,8 +220,6 @@ function FetchData()
 	jq -r '.data[] | (.node + ";" + (.cpu|tostring) + ";" + (.mem|tostring) + ";" + (.maxmem|tostring))' <<< "$response" >/tmp/proxmox/node_load.csv
 
 # add percentage of local storage used
-#	rm data_storage_ceph.csv 2>/dev/null
-#	rm data_node_$NODE.csv 2>/dev/null
 	while read NODE
 	do
 		GetLocalStorage $NODE
@@ -209,7 +240,7 @@ function FetchData()
 		do
 #			echo "$NODE: ${ARR[1]};${ARR[2]};${ARR[0]}"
 			if [ ${ARR[3]} = 1 ]; then
-				((NBT++))
+#				((NBT++))
 				echo "${ARR[1]};${ARR[2]};${ARR[0]}" >> data_template_$NODE.csv
 				echo "$NODE;${ARR[1]};${ARR[2]};${ARR[0]}" >> data_template_ALL.csv
 			fi
@@ -220,14 +251,14 @@ function FetchData()
 	uniq /tmp/proxmox/tags1.csv >data_tags.csv
 
 	TAGARR=()
-	IFS=";";while read TAG
+	IFS=";"; while read TAG
 	do
 		TAGARR+=($TAG)
 	done <data_tags.csv
 
 # Generate a csv file for each tag, holding the node, the VMID, the name, type (Vm:0/T:1) (in that order)
 # The file holds the tags, because a machine can hold several tags so it may be useful to show all the tags assigned
-	IFS=";";while read -a TAG
+	IFS=";"; while read -a TAG
 	do
 		while read -a ARR
 		do
@@ -259,7 +290,7 @@ function FetchData()
 	rm data_group_*.csv 2>/dev/null
 
 	if [ -f /tmp/proxmox/groups1.csv ]; then rm /tmp/proxmox/groups1.csv; fi
-	IFS=";";while read -a TAB
+	IFS=";"; while read -a TAB
 	do
 		GR=${TAB[1]}
 		echo "$GR">>/tmp/proxmox/groups1.csv
@@ -333,7 +364,7 @@ function ShowTemplates()
 	echo -e "\n-Liste des $(wc -l<data_template_ALL.csv) templates:"
 	printf "| %12s | %13s | %15s | %7s |\n" Node Name Tags VMid
 	echo "|--------------+---------------+-----------------+---------|"
-	IFS=";";while read -a ARR
+	IFS=";"; while read -a ARR
 	do
 		printf "| %12s | %13s | %15s | %7s |\n" ${ARR[0]} ${ARR[1]} ${ARR[2]} ${ARR[3]}
 	done < data_template_ALL.csv
@@ -364,7 +395,7 @@ function ShowGroups()
 	echo -e "\n-Nb d'utilisateurs: $(wc -l <data_users.csv), répartis dans $(wc -l <data_groups.csv) groupes"
 	echo -e "|         Group           | #Users |\n|-------------------------+--------|"
 	COMPT=0
-	IFS=";";while read groupname
+	IFS=";"; while read groupname
 	do
 		if ! [ "$groupname" = "" ]; then
 			nb=$(wc -l <data_group_${groupname}.csv)
@@ -420,7 +451,7 @@ function StartStop()
 	fi
 
 	COUNT=0
-	IFS=";";while read -a TAB
+	IFS=";"; while read -a TAB
 	do
 		if [ ${TAB[3]} == 0 ]; then
 			if [ "${TAB[5]}" == "running" ]; then
@@ -439,12 +470,11 @@ function StartStop()
 		echo "Interruption"; exit 1
 	fi
 
-	IFS=";";while read -a TAB
+	IFS=";"; while read -a TAB
 	do
 		if [ ${TAB[3]} == 0 ]; then
 			NODE=${TAB[0]}
 			VMID=${TAB[1]}
-#			set -x
 			if [ "$ACTION" = "Stop" ]; then
 				echo "Arret de la VM n°$VMID"
 				ApiCall POST "/api2/json/nodes/$NODE/qemu/$VMID/status/shutdown?forceStop=1"
@@ -489,7 +519,7 @@ done
 # construction chaine contenant les noms des templates
 unset TEMPLATES
 declare -a TEMPLATES
-IFS=";";while read -a ARR
+IFS=";"; while read -a ARR
 do
 #	echo "TEMPLATES=$TEMPLATES ARR[0]=${ARR[0]}"
 	x=${ARR[0]}
@@ -505,7 +535,7 @@ fi
 echo "TEMPLATE=$TEMPLATE"
 
 # récupération du vmid du template
-IFS=";";while read -a ARR
+IFS=";"; while read -a ARR
 do
 	if [ ${ARR[0]} = $TEMPLATE ]
 	then
@@ -542,7 +572,7 @@ do
 	fi
 	echo "TAGS=$TAGS"
 	if [ ${#TAGS} = 0 ]; then
-		echo "Erreur, donner au moin un tag!"
+		echo "Erreur, donner au moins un tag!"
 	else
 		DONE=YES
 	fi
@@ -620,7 +650,7 @@ fi
 TODAY=$(date '+%Y%m%d_%H%M%S')
 NUMA=1
 
-IFS=";";while read -a ARR
+IFS=";"; while read -a ARR
 do
 	IDU1=${ARR[0]}
 	IFS='@'; read -ra ARR2 <<< "$IDU1"; IFS=';'
@@ -689,7 +719,7 @@ function DeleteVmByTag()
 # count VM only (not templates, as these will not be deleted)
 #echo "TAGDEL=$TAGDEL"
 	COUNT=0
-	IFS=";";while read -a ARR
+	IFS=";"; while read -a ARR
 	do
 		if [ ${ARR[3]} = 0 ]; then ((COUNT++)); fi
 	done < data_tag_${TAGDEL}.csv
@@ -706,7 +736,7 @@ function DeleteVmByTag()
 # TODO: pas plus simple de lire dans le fichier tags_XXXX.csv ???
 
 COMPT=0
-IFS=";";while read -a TAB
+IFS=";"; while read -a TAB
 do
 	if ! [ "${TAB[3]}" = "" ]; then
 		IFS=","; read -r -a TAGS <<< "${TAB[3]}"; IFS=";"
@@ -746,7 +776,7 @@ function ViewVmByTag()
 	printf "| VM/T |      Node     |       Nom       |    VMId     |      Tags       || Stat |\n";
 	printf "|------+---------------+-----------------+-------------+-----------------++------|\n"
 
-	IFS=";";while read -a TAB
+	IFS=";"; while read -a TAB
 	do
 		if [ ${TAB[3]} == 1 ]; then
 			printf "|  T   |"
@@ -799,7 +829,7 @@ function ViewGroups()
 	printf "|       Id       |                   email                  |\n";
 	printf "|----------------+------------------------------------------|\n"
 
-	IFS=";";while read -a TAB
+	IFS=";"; while read -a TAB
 	do
 		printf "| %14s | %-40s |\n" ${TAB[0]} ${TAB[1]}
 	done <$GROUPFILE
@@ -826,10 +856,12 @@ function ViewVmByNode()
 
 	if ! [ "$DEBUG" = "N" ]; then clear; fi
 	echo -e "\n-Liste des $(wc -l<data_node_$VNODE.csv) machines du node '$VNODE':"
-	printf "| VM/T |    |        Nom       |    VMId    |     Tags      |\n";
-	printf "|------+----+------------------+------------+---------------|\n"
+	printf "| VM/T |    |        Nom       |    VMId    |     Tags      | Disk |\n";
+	printf "|------+----+------------------+------------+---------------|------|\n"
 	NBON=0
-	IFS=";";while read -a TAB
+	NBSSD=0
+	NBHDD=0
+	IFS=";"; while read -a TAB
 	do
 		if [ ${TAB[3]} == 1 ]; then
 			printf "|  T   | - "
@@ -843,9 +875,14 @@ function ViewVmByNode()
 				((NBON++))
 			fi
 		fi
-		printf " | %-16s | %10d | %13s |\n" ${TAB[1]} ${TAB[0]} ${TAB[2]}
+#		echo "TAILLE TAB2=${#TAB[2]}"
+		TAGS=${TAB[2]}
+		if [ ${#TAB[2]} = 0 ]; then TAGS="(no-tags)";fi
+		if [ "${TAB[5]}" = "SSD" ]; then ((NBSSD++)); fi
+		if [ "${TAB[5]}" = "HDD" ]; then ((NBHDD++)); fi
+		printf " | %-16s | %10d | %13s |  %3s |\n" ${TAB[1]} ${TAB[0]} $TAGS ${TAB[5]}
 	done <data_node_$VNODE.csv
-	printf "|------+----+------------------+------------+---------------|\n"
+	printf "|------+----+------------------+------------+---------------|------|\n"
 
 	NBT=0
 	if [ -f data_template_$VNODE.csv ]; then
@@ -854,7 +891,7 @@ function ViewVmByNode()
 
 	NBTOT=$(wc -l <data_node_$VNODE.csv)
 	((NBVM=NBTOT-NBT))
-	echo "Bilan: $NBT templates et $NBVM VM, dont $NBON en fonctionnement"
+	echo "Bilan: $NBT templates et $NBVM VM, dont $NBON en fonctionnement, $NBSSD sur SSD et $NBHDD sur HDD"
 }
 
 #================================================================
