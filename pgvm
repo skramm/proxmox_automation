@@ -317,19 +317,23 @@ function FetchData()
 #================================================================
 function ShowNodes()
 {
-	echo "|    Node    | #VM | #Templ. |  Tot  ||  ON | OFF || %storage |  %CPU  |"
-	echo "|------------+-----+---------+-------++-----+-----++----------+--------|"
+	echo "|    Node    | #VM | #Templ. |  Tot  ||  ON | OFF || %storage |  %CPU  || #SSD | #HDD |"
+	echo "|------------+-----+---------+-------++-----+-----++----------+--------++------+------|"
 
 	TOTVM=0
 	TOTT=0
 	TOTALL=0
 	TOTON=0
 	TOTOFF=0
+	TOTSSD=0
+	TOTHDD=0
 	IFS=";"; while read -a ARR
 	do
 		NODE=${ARR[0]}
 		STOR=${ARR[1]}
 #		printf "val=%5.3f\n" ${ARR[1]}
+		NBSSD=0
+		NBHDD=0
 		NBON=0
 		NBOFF=0
 		NBTOT=$(wc -l <data_node_$NODE.csv)
@@ -349,20 +353,24 @@ function ShowNodes()
 					((NBOFF++))
 				fi
 			fi
+			if [ "${ARR2[5]}" = "SSD" ]; then ((NBSSD++)); fi
+			if [ "${ARR2[5]}" = "HDD" ]; then ((NBHDD++)); fi
 		done <data_node_$NODE.csv
 		IFS=$IFSOLD
 		STOR2=$(bc <<< $STOR*100)
 		CPULOAD=${ARR[2]}
-		printf "| %10s | %3d | %7d | %5d || %3d | %3d ||   %5.1f%% | %3.3f%% | \n" $NODE $NBVM $NBT $NBTOT $NBON $NBOFF $STOR2 $CPULOAD
+		printf "| %10s | %3d | %7d | %5d || %3d | %3d ||   %5.1f%% | %3.3f%% ||  %2d  |  %2d  | \n" $NODE $NBVM $NBT $NBTOT $NBON $NBOFF $STOR2 $CPULOAD $NBSSD $NBHDD
 		((TOTVM+=NBVM))
 		((TOTT+=NBT))
 		((TOTALL+=NBTOT))
 		((TOTON+=NBON))
 		((TOTOFF+=NBOFF))
+		((TOTSSD+=NBSSD))
+		((TOTHDD+=NBHDD))
 	done < data_nodes.csv
 
-	echo "|------------+-----+---------+-------++-----+-----++----------+--------|"
-	printf "      Totaux | %3d | %7d | %5d || %3d | %3d ||\n" $TOTVM $TOTT $TOTALL $TOTON $TOTOFF
+	echo "|------------+-----+---------+-------++-----+-----++----------+--------++------+------|"
+	printf "      Totaux | %3d | %7d | %5d || %3d | %3d ||                    | %3d  | %3d  |\n" $TOTVM $TOTT $TOTALL $TOTON $TOTOFF $TOTSSD $TOTHDD
 }
 
 
