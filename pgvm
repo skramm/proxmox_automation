@@ -120,13 +120,21 @@ function ProcessNode()
 			do
 				echo -n "${VM[0]};${VM[1]};${VM[2]};${VM[3]};${VM[4]};" >>data_node_$1.csv
 				if [ ${ARR3[0]} = $CEPH_HDD_NAME ]; then
-					echo "HDD" >>data_node_$1.csv
+					echo -n "HDD" >>data_node_$1.csv
 				else
 					if [ ${ARR3[0]} = $CEPH_SSD_NAME ]; then
-						echo "SSD" >>data_node_$1.csv
+						echo -n "SSD" >>data_node_$1.csv
 					else
-						echo "???" >>data_node_$1.csv
+						echo -n "???" >>data_node_$1.csv
 					fi
+				fi
+# determine if full clone or linked clone
+				DNAME=${ARR3[1]}
+#				echo "DNAME=$DNAME, ${DNAME:0:4}"
+				if [ "${DNAME:0:4}" = "base" ]; then
+					echo ";LC" >>data_node_$1.csv
+				else
+					echo ";FC" >>data_node_$1.csv
 				fi
 			done <<< $D1; IFS=","
 		done <<<$DISK; IFS=";"
@@ -856,8 +864,8 @@ function ViewVmByNode()
 
 	if ! [ "$DEBUG" = "N" ]; then clear; fi
 	echo -e "\n-Liste des $(wc -l<data_node_$VNODE.csv) machines du node '$VNODE':"
-	printf "| VM/T |    |        Nom       |    VMId    |     Tags      | Disk |\n";
-	printf "|------+----+------------------+------------+---------------|------|\n"
+	printf "| VM/T |    |        Nom       |    VMId    |     Tags      | Disk | Type |\n";
+	printf "|------+----+------------------+------------+---------------+------+------|\n"
 	NBON=0
 	NBSSD=0
 	NBHDD=0
@@ -880,9 +888,9 @@ function ViewVmByNode()
 		if [ ${#TAB[2]} = 0 ]; then TAGS="(no-tags)";fi
 		if [ "${TAB[5]}" = "SSD" ]; then ((NBSSD++)); fi
 		if [ "${TAB[5]}" = "HDD" ]; then ((NBHDD++)); fi
-		printf " | %-16s | %10d | %13s |  %3s |\n" ${TAB[1]} ${TAB[0]} $TAGS ${TAB[5]}
+		printf " | %-16s | %10d | %13s |  %3s |  %2s  |\n" ${TAB[1]} ${TAB[0]} $TAGS ${TAB[5]} ${TAB[6]}
 	done <data_node_$VNODE.csv
-	printf "|------+----+------------------+------------+---------------|------|\n"
+	printf "|------+----+------------------+------------+---------------+------+------|\n"
 
 	NBT=0
 	if [ -f data_template_$VNODE.csv ]; then
