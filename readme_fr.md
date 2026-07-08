@@ -102,6 +102,13 @@ Proxmox utilise par défaut le 8006, et c'est celui qui est utilisé ici par dé
 ```
 PORT=1234
 ```
+**Stockage CEPH**
+
+Le dialogue principal affiche l'état du stockage CEPH, en %.
+Notre infra dispose d'une baie comprenant à la fois du SSD et du HDD, et les deux valeurs sont affichées.
+Le nom utilisé dans Proxmox peut être donné dans ce fichier, les valeurs par défaut sont `ceph-ssd` et `ceph-hdd`.
+Si les noms sont différents, on peut les spécifier via les variables
+`CEPH_SSD_NAME` et `CEPH_SSD_NAME`.
 
 L'API n'est accessible que via l'une des machines du cluster, il faut donc spécifier le nom de celle qui sera utilisée dans la variable `APINODE`.
 Si ce node tombe, il suffit d'un prendre un autre.
