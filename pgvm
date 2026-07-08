@@ -20,7 +20,7 @@ VERSION=20260630
 # TODO: ajouter option lors de la création de machines pour distribuer les VM sur les (3) noeuds
 # en pratique, elles sont toute créées sur le même node, il faut ensuite faire une migration
 
-# TODO ajouter une visualisation des taches en cours (utilie dans le cas de migration en masse)
+# TODO ajouter une visualisation des taches en cours (utile dans le cas de migration en masse)
 # voir https://pve.proxmox.com/pve-docs/api-viewer/#/nodes/{node}/tasks
 
 # Disable interpretation of exclamation mark by the shell

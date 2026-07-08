@@ -17,13 +17,6 @@
 => Alors cet outil est pour vous!
 
 
-## TODO:
-
-- bug: lors de la création par clonage, le template se voit affecté des tags?
-- bug: ajout de permissions d'un autre groupe au set de VM créée: pas fonctionnel
-- feature: lors de la création d'un ensemble de VM, prévoir la création distribuée sur les différents nodes (via migration a posteriori?)
-- feature: prevoir la possibilité d'archivage des VM depuis le stockage SSD vers le stockage HDD.
-
 ## Introduction
 
 Nous disposons dans le département d'un hyperviseur "ProxMox", afin que les étudiants puissent disposer de VM pour des TP.
@@ -110,9 +103,13 @@ Le nom utilisé dans Proxmox peut être donné dans ce fichier, les valeurs par 
 Si les noms sont différents, on peut les spécifier via les variables
 `CEPH_SSD_NAME` et `CEPH_SSD_NAME`.
 
+**Machine d'accès**
+
 L'API n'est accessible que via l'une des machines du cluster, il faut donc spécifier le nom de celle qui sera utilisée dans la variable `APINODE`.
 Si ce node tombe, il suffit d'un prendre un autre.
 Mais quel que soit le node choisi pour la connexion, l'ensemble du cluster est manipulable via l'API.
+
+**Lancement***
 
 Le lancement du programme sera fait dans un dossier vide, fait en donnant le nom (et chemin éventuel) de ce fichier.
 Ce fichier sera ensuite lu (avec `source`) pour récupérer les informations de connexion et d'identification;
@@ -127,7 +124,7 @@ Il est recommandé de démarrer à partir d'un dossier vide parce que l'ensemble
 
 ### Fonctionnalités
 
-Si tout est bon, le lancement affiche l'ensemble des informations de façon synthétique dans la console, puis propose un menu ressemblant à ceci (ici nos nodes s'appellent `gerard`, `antonin` et `pierrick`):
+Si tout est bon, le lancement affiche l'ensemble des informations de façon synthétique dans la console, puis propose un menu ressemblant à ceci (ici les nodes s'appellent `gerard`, `antonin` et `pierrick`):
 
 ![dashboard1](img/dash1.jpg)
 
