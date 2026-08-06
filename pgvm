@@ -484,31 +484,31 @@ function StartStop()
 			fi
 		fi
 	done <data_tag_$VTAG.csv
+	echo "Nb de VM concernées: $COUNT"
 
-	MSG="arrêter"
-	if [ "$ACTION" = "Start" ]; then
-		MSG="démarrer"
-	fi
-
-	START=$(zenity --question --text "Ok pour $MSG $COUNT VMs?")
-	if [ $? != 0 ]; then
-		echo "Interruption"; exit 1
-	fi
-
-	IFS=";"; while read -a TAB
-	do
-		if [ ${TAB[3]} == 0 ]; then
-			NODE=${TAB[0]}
-			VMID=${TAB[1]}
-			if [ "$ACTION" = "Stop" ]; then
-				echo "Arret de la VM n°$VMID"
-				ApiCall POST "/api2/json/nodes/$NODE/qemu/$VMID/status/shutdown?forceStop=1"
-			else
-				echo "Démarrage de la VM n°$VMID"
-				ApiCall POST "/api2/json/nodes/$NODE/qemu/$VMID/status/start"
-			fi
+	if [ $COUNT != 0 ]; then
+		MSG="arrêter"
+		if [ "$ACTION" = "Start" ]; then
+			MSG="démarrer"
 		fi
-	done <data_tag_$VTAG.csv
+		START=$(zenity --question --text "Ok pour $MSG $COUNT VMs?")
+		if [ $? = 0 ]; then
+			IFS=";"; while read -a TAB
+			do
+				if [ ${TAB[3]} == 0 ]; then
+					NODE=${TAB[0]}
+					VMID=${TAB[1]}
+					if [ "$ACTION" = "Stop" ]; then
+						echo "Arret de la VM n°$VMID"
+						ApiCall POST "/api2/json/nodes/$NODE/qemu/$VMID/status/shutdown?forceStop=1"
+					else
+						echo "Démarrage de la VM n°$VMID"
+						ApiCall POST "/api2/json/nodes/$NODE/qemu/$VMID/status/start"
+					fi
+				fi
+			done <data_tag_$VTAG.csv
+		fi
+	fi
 }
 
 
@@ -802,6 +802,34 @@ echo "-$COMPT VM supprimées, appuyer sur une touche"
 read
 }
 
+#================================================================
+# Show list of VM holding a given tag
+function MoveVmDiskByTag()
+{
+	VTAG=$(zenity --list --height=300 --text="Quel tag?" --column="Tags" "${TAGARR[@]}")
+	if [ $? != 0 ]; then
+		echo "Interruption"; exit 1
+	fi
+	
+# Affichage du stockage actuel
+
+# question
+	echo "Migration des $(wc -l <data_tag_$VTAG.csv) VM vers XXX N (O/N)?"
+	read on
+	if [ $on = O ]; then
+		IFS=";"; while read -a TAB
+		do
+			NODE=${TAB[0]}
+			VMID=${TAB[1]}
+			ApiCall POST /api2/json/nodes/$NODE/qemu/$VMID/move_disk?disk=????&node=$NODE&vmid=$VMID&target-disk=???
+			
+			
+			
+		done <data_tag_$VTAG.csv
+	else
+		echo "annulation"
+	fi
+}
 
 #================================================================
 # Show list of VM holding a given tag
