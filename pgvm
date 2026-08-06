@@ -240,11 +240,15 @@ function FetchData()
 		printf "%s;%.3f;%.3f\n" $NODE $STOR_RATIO $CPULOAD >>data_nodes.csv
 	done </tmp/proxmox/data_nodes2.csv
 
+	NB_NODES=$(wc -l <data_nodes.csv)
+	echo "NB_NODES=$NB_NODES"
+	
 # Main API loop, iterate on all nodes and collect all the nodes data
 	IFS=";"; while read -a ARRN
 	do
 		NODE=${ARRN[0]}
-
+		NODEARR+=($NODE)
+		
 # step 1: fetch all the machines on that node
 		ProcessNode $NODE
 
@@ -670,6 +674,7 @@ fi
 
 TODAY=$(date '+%Y%m%d_%H%M%S')
 NUMA=1
+NODE_IDX=0
 
 IFS=";"; while read -a ARR
 do
@@ -716,6 +721,21 @@ do
 		"https://${APINODE}.${DOMAIN}:${PORT}/api2/json/access/acl")
 	err=$?
 	CheckError
+
+# Migration of the created VM on all the nodes of the cluster
+	if [ "$DO_MIGRATE" = "Y" ]; then
+		((NODE_IDX++))
+		if [ $NODE_IDX = $NB_NODES ]; then
+			NODE_IDX=0
+		fi
+		NEW_NODE=$NODEARR[$NODE_IDX]
+		if [ $NEW_NODE = $BASENODE ]; then
+			echo "$VMNAME: no migration"
+		else
+			echo "$VMNAME: migration on node $NEW_NODE"
+			ApiCall POST /api2/json/nodes/$BASENODE/qemu/$VMID/migrate?node=$BASENODE&vmid=$VMID&target=${NEW_NODE}
+		fi
+	fi
 
 	((NUMA++))
 done <data_group_${GROUPSEL}.csv
@@ -988,6 +1008,10 @@ declare -A TAGAARR
 
 unset TAGARR
 declare -a TAGARR
+
+# create an array holding the nodes names
+unset NODEARR
+declare -a NODEARR
 
 FetchData
 ShowDashboard
