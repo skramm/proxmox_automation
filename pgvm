@@ -145,7 +145,7 @@ function ProcessNode()
 		done <<<$DISK; IFS=";"
 	done </tmp/proxmox/data_node2_$1.csv
 
-	
+
 # Add node name on each line of global file, first position
 	IFS=";"; while read line;
 	do
@@ -207,8 +207,8 @@ function GetCPULoad()
 			CPULOAD=${ARRLOAD[1]}
 		fi
 	done </tmp/proxmox/node_load.csv
-	CPULOAD=$(bc <<< $CPULOAD*100) 
-	
+	CPULOAD=$(bc <<< $CPULOAD*100)
+
 #	echo "GetCPULoad(): CPULOAD=$CPULOAD"
 }
 
@@ -223,7 +223,7 @@ function FetchData()
 	rm /tmp/proxmox/* 2>/dev/null
 	rm data_* 2>/dev/null
 	TAGAARR=()
-	
+
 # Fetch list of nodes
 	ApiCall GET "/api2/json/nodes"
 	jq  -r '.data[] | .node' <<<"$response" >/tmp/proxmox/data_nodes.csv 2>>$CURLLOG
@@ -242,13 +242,13 @@ function FetchData()
 
 	NB_NODES=$(wc -l <data_nodes.csv)
 	echo "NB_NODES=$NB_NODES"
-	
+
 # Main API loop, iterate on all nodes and collect all the nodes data
 	IFS=";"; while read -a ARRN
 	do
 		NODE=${ARRN[0]}
 		NODEARR+=($NODE)
-		
+
 # step 1: fetch all the machines on that node
 		ProcessNode $NODE
 
@@ -349,7 +349,7 @@ function ShowNodes()
 		NBT=0
 		if [ -f data_template_$NODE.csv ]; then
 			NBT=$(wc -l <data_template_$NODE.csv)
-		fi	
+		fi
 		((NBVM=NBTOT-NBT))
 		IFSOLD=$IFS
 		IFS=";"; while read -a ARR2
@@ -565,7 +565,7 @@ do
 	if [ ${ARR[0]} = $TEMPLATE ]
 	then
 		TVMID=${ARR[2]}
-	fi 
+	fi
 done < data_template_$BASENODE.csv
 
 echo "TVMID=$TVMID"
@@ -691,7 +691,7 @@ do
 		echo "-Create VM on node $BASENODE (Id=$TVMID): name=${VMNAME}, id=$VMID"
 	fi
 	DESC="VM Cloned from template $TEMPLATE (VMId=$TVMID), created on $TODAY by user $PVUSER"
-	
+
 	echo " -Clonage VM depuis $TEMPLATE, nom=$VMNAME"
 # ref: https://pve.proxmox.com/pve-docs/api-viewer/#/nodes/{node}/qemu/{vmid}/clone
 	response=$(curl -k \
@@ -810,7 +810,7 @@ function MoveVmDiskByTag()
 	if [ $? != 0 ]; then
 		echo "Interruption"; exit 1
 	fi
-	
+
 # Affichage du stockage actuel
 
 # question
@@ -822,9 +822,9 @@ function MoveVmDiskByTag()
 			NODE=${TAB[0]}
 			VMID=${TAB[1]}
 			ApiCall POST /api2/json/nodes/$NODE/qemu/$VMID/move_disk?disk=????&node=$NODE&vmid=$VMID&target-disk=???
-			
-			
-			
+
+
+
 		done <data_tag_$VTAG.csv
 	else
 		echo "annulation"
@@ -859,7 +859,7 @@ function ViewVmByTag()
 		if [ "${TAB[5]}" = "stopped" ]; then
 			echo "🔴  |"
 		fi
-		
+
 	done <data_tag_$VTAG.csv
 	printf "|------+---------------+-----------------+-------------+-----------------++------|\n"
 }
