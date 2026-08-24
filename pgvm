@@ -23,6 +23,11 @@ VERSION=20260630
 # TODO ajouter une visualisation des taches en cours (utile dans le cas de migration en masse)
 # voir https://pve.proxmox.com/pve-docs/api-viewer/#/nodes/{node}/tasks
 
+
+# Automatic dispatching of created VM on all the nodes
+DO_MIGRATE=Y
+
+
 # Disable interpretation of exclamation mark by the shell
 set +H
 
@@ -516,12 +521,12 @@ function StartStop()
 function CreateVmSet()
 {
 # re-create an array holding the nodes names
-unset NODEARR
-declare -a NODEARR
-while read -a ARR
-do
-	NODEARR+=(${ARR[0]})
-done < data_nodes.csv
+#unset NODEARR
+#declare -a NODEARR
+#while read -a ARR
+#do
+#	NODEARR+=(${ARR[0]})
+#done < data_nodes.csv
 
 DONE=NO
 while [ $DONE = NO ]
@@ -624,6 +629,7 @@ do
 		DONE=YES
 	fi
 done
+if [ "$DEBUG" = "Y" ]; then echo "VMID=$VMID";fi
 
 # create an array holding the group names, just for the zenity call below
 unset GROUPARR
@@ -724,15 +730,16 @@ do
 
 # Migration of the created VM on all the nodes of the cluster
 	if [ "$DO_MIGRATE" = "Y" ]; then
+		echo " -migration"
 		((NODE_IDX++))
 		if [ $NODE_IDX = $NB_NODES ]; then
 			NODE_IDX=0
 		fi
-		NEW_NODE=$NODEARR[$NODE_IDX]
+		NEW_NODE=${NODEARR[$NODE_IDX]}
 		if [ $NEW_NODE = $BASENODE ]; then
 			echo "$VMNAME: no migration"
 		else
-			echo "$VMNAME: migration on node $NEW_NODE"
+			echo "$VMNAME: NODE_IDX=$NODE_IDX, migration on node $NEW_NODE"
 			ApiCall POST /api2/json/nodes/$BASENODE/qemu/$VMID/migrate?node=$BASENODE&vmid=$VMID&target=${NEW_NODE}
 		fi
 	fi
@@ -911,12 +918,12 @@ function ViewGroups()
 function ViewVmByNode()
 {
 # re-create an array holding the nodes names
-	unset NODEARR
-	declare -a NODEARR
-	while read -a ARR
-	do
-		NODEARR+=(${ARR[0]})
-	done < data_nodes.csv
+#	unset NODEARR
+#	declare -a NODEARR
+#	while read -a ARR
+#	do
+#		NODEARR+=(${ARR[0]})
+#	done < data_nodes.csv
 
 	VNODE=$(zenity --list --text="Quel node ?" --column="node" "${NODEARR[@]}")
 	if [ $? != 0 ]; then
