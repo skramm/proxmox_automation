@@ -228,7 +228,7 @@ function GetCPULoad()
 function FetchData()
 {
 	if [ "$DEBUG" = "Y" ]; then echo "FetchData()"; fi
-
+	echo "Gathering data, please wait..."
 # clean out old data
 	rm /tmp/proxmox/* 2>/dev/null
 	rm data_* 2>/dev/null
@@ -781,9 +781,8 @@ do
 		if [ $NEW_NODE = $BASENODE ]; then
 			echo "$VMNAME: no migration"
 		else
-			echo "MIGRATE $VMNAME: NODE_IDX=$NODE_IDX, migration on node $NEW_NODE"
-			echo "ApiCall POST /api2/json/nodes/$BASENODE/qemu/$VMID/migrate?node=$BASENODE&vmid=$VMID&target=${NEW_NODE}"
-			ApiCall POST /api2/json/nodes/$BASENODE/qemu/$VMID/migrate?node=$BASENODE&vmid=$VMID&target=${NEW_NODE}
+			echo "$VMNAME: migration on node $NEW_NODE"
+			ApiCall POST "/api2/json/nodes/$BASENODE/qemu/$VMID/migrate?node=$BASENODE&vmid=$VMID&target=${NEW_NODE}"
 			echo "response=$response"
 		fi
 	fi

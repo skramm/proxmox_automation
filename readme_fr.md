@@ -28,6 +28,7 @@ Avec l'interface web native, ceci est laborieux: ça implique de cloner les mach
 De plus, les VM à créer peuvent être différentes selon les TP, et certains TP peuvent nécessiter aussi de créer 2, voire 3 VM.
 
 Il n'est donc pas envisageable d'utiliser pour cela l'interface web native.
+La vue "_Server_" de celle-ci propose des actions globale via le bouton "_Bulk Actions_" mais c'est limité à la migration et à la mise en marche & extinction.
 
 D'autres solutions auraient pu être utilisées (probablement des outils comme Terraform?), l'approche utilisée ici a consisté à utiliser l'API HTTP directement, via `curl` depuis un script bash qui va itérer la création des clones.
 
@@ -136,7 +137,7 @@ Si tout est bon, le lancement affiche l'ensemble des informations de façon synt
 On note ici, dans l'ordre:
 - le nb de VM et template sur chaque node, ainsi que le nombre de machines allumées, ainsi que le pourcentage du stockage local utilisé;
 - les templates disponibles pour fabriquer des clones;
-- la liste des tags existants (oui, je fais des expérimentations...);
+- la liste des tags existants;
 - la liste des groupes d'utilisateurs, ainsi que l'effectif de chaque groupe.
 A noter qu'un utilisateur pourrait se trouver dans plusieurs groupes, ce qui fait qu'on pourrait avoir un total de l'effectif des groupes différents du nombre total d'utilisateurs (pas le cas ici).
 
@@ -157,9 +158,7 @@ On peut afficher la liste des VM et des "templates" d'un node via "Liste VMs par
 **Note 1**: il faut avoir préalablement construit une machine fonctionnelle et la convertir en template.
 Ceci se fait depuis l'interface web et n'est pas pris en charge ici.
 
-**Note 2**: les machines seront clonées sur le même node que celui où se trouve le template.
-
-**Note 3**: les VM sont par défaut des "_linked clone_", donc liées à un template.
+**Note 2**: les VM sont par défaut des "_linked clone_", donc liées à un template.
 
 Les VM créées seront obligatoirement associées à un **groupe** d'utilisateurs:
 il y aura autant de clones créés que d'utilisateurs dans ce groupe.
@@ -177,6 +176,10 @@ Attention: pas de caractère underscore (`_`) dans les noms des VM.
 
 Si le TP demande deux VM par étudiant, il faudra répéter la procédure de création et il faudra donner deux identifiants différents.
 Par exemple `R123A` et `R123B`.
+
+Par défaut, les machines sont clonées à partir du template puis **déplacées** de façon homogène sur l'ensemble du cluster.
+Par exemple si on veut créer 10 VM sur un cluster de 3 serveurs, alors la 1ère sera placée sur la machine de base (où se situe le template), la 2è sur le serveur n°2, la 3è sur le serveur n°3, et la 4è sur le serveur n°1.
+L'idée étant que lors de l'utilisation, la charge soit répartie sur les différentes machines physique.
 
 
 **Numérotation des clones**
