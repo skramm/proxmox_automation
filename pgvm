@@ -251,8 +251,9 @@ function FetchData()
 	done </tmp/proxmox/data_nodes2.csv
 
 	NB_NODES=$(wc -l <data_nodes.csv)
-	echo "NB_NODES=$NB_NODES"
+#	echo "NB_NODES=$NB_NODES"
 
+	NODEARR=()
 # Main API loop, iterate on all nodes and collect all the nodes data
 	IFS=";"; while read -a ARRN
 	do
@@ -729,6 +730,7 @@ do
 
 	echo " -Ajout des tags"
 	ApiCall POST "/api2/json/nodes/$BASENODE/qemu/$VMID/config?node=$BASENODE&vmid=$VMID&tags=$TAGS"
+	echo "response=$response"
 
 	echo " -configuration permissions (roles)"
 # ref: https://pve.proxmox.com/pve-docs/api-viewer/#/access/acl
@@ -755,7 +757,8 @@ do
 		if [ $NEW_NODE = $BASENODE ]; then
 			echo "$VMNAME: no migration"
 		else
-			echo "$VMNAME: NODE_IDX=$NODE_IDX, migration on node $NEW_NODE"
+			echo "MIGRATE $VMNAME: NODE_IDX=$NODE_IDX, migration on node $NEW_NODE"
+			echo "ApiCall POST /api2/json/nodes/$BASENODE/qemu/$VMID/migrate?node=$BASENODE&vmid=$VMID&target=${NEW_NODE}"
 			ApiCall POST /api2/json/nodes/$BASENODE/qemu/$VMID/migrate?node=$BASENODE&vmid=$VMID&target=${NEW_NODE}
 			echo "response=$response"
 		fi
@@ -1034,25 +1037,26 @@ mkdir -p /tmp/proxmox
 
 # test de la réponse de l'API
 
-echo "-Test de la réponse de l'API"
-ping -c 1 ${APINODE}.${DOMAIN} 2>/dev/null
+echo -n "-Test de la réponse de l'API: "
+ping -c 1 ${APINODE}.${DOMAIN} 1>/dev/null 2>/dev/null
 if ! [ $? = 0 ]; then
 	echo "Error: DNS failure on ${APINODE}.${DOMAIN}"
 	exit 1
 fi
+echo "ok"
 
 curl --insecure \
 	--connect-timeout 5 \
 	--silent -X GET \
 	-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
-	"https://${APINODE}.${DOMAIN}:${PORT}/api2/json/version"
+	"https://${APINODE}.${DOMAIN}:${PORT}/api2/json/version" >> $CURLLOG
 	if ! [ $? = 0 ];
 	then
 		echo "Error: API not reachable, please check credentials in file '$TOKEN_FILE'"
 		exit 1
 	fi
 
-echo "-connection API: fonctionnelle!"
+echo "-Connection API: ok"
 
 # Associative array used to count tags
 unset TAGAARR
