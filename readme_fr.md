@@ -38,11 +38,11 @@ Et également les supprimer une fois les TP terminés.
 Son utilisation implique que l'utilisateur aie un certain nombre de privilèges, en particulier `Sys.Audit`.
 
 
-**Objectifs de ce programme**:  
+**Objectifs de ce programme**:
 avoir un outil permettant de lister, créer/supprimer, démarrer/éteindre, etc.
 un ensemble de VM pour des TPs, et leur associer des tags permettant de la manipuler de façon globale.
 
-Pour les collègues de l'URN, une doc générale de type "tuto" sur l'utilisation de Proxmox dans le cadre du dept RT de l'IUT de Rouen est [accessible ici](https://gitlab.univ-rouen.fr/litis-kramm/RT_docs/-/blob/main/proxmox/tuto_proxmox.md)  
+Pour les collègues de l'URN, une doc générale de type "tuto" sur l'utilisation de Proxmox dans le cadre du dept RT de l'IUT de Rouen est [accessible ici](https://gitlab.univ-rouen.fr/litis-kramm/RT_docs/-/blob/main/proxmox/tuto_proxmox.md)
 (**note**: Implique d'avoir un compte URN et l'accès au gitlab via le CAS URN)
 
 - Référence API: https://pve.proxmox.com/pve-docs/api-viewer/
@@ -90,18 +90,23 @@ Remplacer `XXX` et `YYY` par nom et valeur du token généré,
 `MYREALM` par l'identifiant du serveur d'authentification,
 et `ZZZZ` par votre identifiant sur le domaine.
 
-**Numéro de port**  
-Proxmox utilise par défaut le 8006, et c'est celui qui est utilisé ici par défaut, mais si jamais le gestionnaire du cluster a modifié ceci, il suffit d'ajouter la définition suivante avec le bon numéro:
+Pour `APINODE`, mettre le nom d'une des machines du cluster.
+
+
+**Numéro de port**
+Proxmox utilise par défaut le 8006, et c'est celui qui est utilisé ici par défaut, mais si jamais le gestionnaire du cluster a modifié ceci, il suffit d'ajouter dans le fichier la définition suivante avec le bon numéro:
 ```
 PORT=1234
 ```
+
 **Stockage CEPH**
 
 Le dialogue principal affiche l'état du stockage CEPH, en %.
 Notre infra dispose d'une baie comprenant à la fois du SSD et du HDD, et les deux valeurs sont affichées.
 Le nom utilisé dans Proxmox peut être donné dans ce fichier, les valeurs par défaut sont `ceph-ssd` et `ceph-hdd`.
 Si les noms sont différents, on peut les spécifier via les variables
-`CEPH_SSD_NAME` et `CEPH_SSD_NAME`.
+`CEPH_SSD_NAME` et `CEPH_HDD_NAME`
+dans le fichier de "credentials".
 
 **Machine d'accès**
 
@@ -112,7 +117,7 @@ Mais quel que soit le node choisi pour la connexion, l'ensemble du cluster est m
 **Lancement***
 
 Le lancement du programme sera fait dans un dossier vide, fait en donnant le nom (et chemin éventuel) de ce fichier.
-Ce fichier sera ensuite lu (avec `source`) pour récupérer les informations de connexion et d'identification;
+Ce fichier sera ensuite lu (avec `source`) pour récupérer les informations de connexion et d'identification:
 
 ```
 $ pgvm chemin/vers/le/fichier
@@ -216,23 +221,23 @@ Dans l'ordre:
 
 ## FAQ
 
-- Q: Pourquoi ne pas avoir construit ceci sous la forme d'une commande CLI?  
+- Q: Pourquoi ne pas avoir construit ceci sous la forme d'une commande CLI?
 R: L'idée était de faire quelque chose de facile et intuitif de prise en main, mais sans imposer de "framework" lourd, donc l'utilisation de zenity, assez courant dans les distrib contemporaines, semblait une bonne idée.
 Mais il y avait des alternatives, notamment [dialog](https://linux.die.net/man/1/dialog), mais plus complexe à mettre en oeuvre.
 Je suis parti sur `zenity`, mais il y a des limitations:
 pas de "checkbox" notamment, contrairement à `dialog`.
 
-- Q: pourquoi ne pas avoir fait ça en Python? C'est plutot plus performant et souple.  
+- Q: pourquoi ne pas avoir fait ça en Python? C'est plutot plus performant et souple.
 R:  Je suis plus à l'aise en Bash qu'en Python, c'est la seule raison.
 
-- Q: Est-ce que ceci est utilisable sous Windows avec WSL?  
+- Q: Est-ce que ceci est utilisable sous Windows avec WSL?
 R: Aucune idée, mais je suis preneur de retours!
 
-- Q: Pourquoi des affichages en français?  
+- Q: Pourquoi des affichages en français?
 R: L'idée initiale était de faciliter l'usage en interne (IUT Rouen/URN), mais à terme j'envisage une internationalisation
 (mais bon, c'est en bash, donc faut pas trop complexifier non plus...)
 
-- Q: bizarre, le nom, non?  
+- Q: bizarre, le nom, non?
 R: oui, j'ai pas trouvé mieux...
 
 
