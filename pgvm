@@ -101,7 +101,8 @@ function ApiCall()
 # Fetch data of a given node ($1), called by FetchData()
 function ProcessNode()
 {
-	if [ "$DEBUG" = "Y" ]; then echo "ProcessNode(): $1"; fi
+	echo "ProcessNode(): $1"
+	if [ "$DEBUG" = "Y" ]; then echo "FUNCTION $FUNCNAME -$1-">>debug.log ; fi
 
 	ApiCall GET "/api2/json/nodes/$1/qemu?full=1"
 	jq -r '.data[]' <<< "$response" >/tmp/proxmox/node_$1.json
@@ -123,19 +124,25 @@ function ProcessNode()
 	sort --key=1 /tmp/proxmox/node_$1.csv >/tmp/proxmox/data_node2_$1.csv
 
 # Add type and disk config
+# Depending on machine type, the disk will be encode in the API response either as
+# "scsi0" (Linux, probably?) or "ide0" (Windows?)
 	IFS=";"; while read -a VM
 	do
 		ID=${VM[0]}
 		ApiCall GET "/api2/json/nodes/$1/qemu/$ID/config"
-echo "response=$response" >>debug.log
+#echo -e "\n-response=$response" >>debug.log
 		DISK=$(jq -r '.data.scsi0' <<< "$response")
+		if [ "$DISK" = "null" ]; then
+			DISK=$(jq -r '.data.ide0' <<< "$response")
+		fi
 		if [ "$DEBUG" = "Y" ]; then echo "node=$1 ID=$ID DISK=$DISK" >>debug.log; fi
 		IFS=","; while read -a ARR2
 		do
 			D1=${ARR2[0]}
-echo "D1=$D1" >>debug.log
+#echo "D1=$D1" >>debug.log
 			IFS=":"; while read -a ARR3
 			do
+#echo "ARR3[0]=${ARR3[0]}" >>debug.log
 				echo -n "${VM[0]};${VM[1]};${VM[2]};${VM[3]};${VM[4]};" >>data_node_$1.csv
 				if [ ${ARR3[0]} = $CEPH_HDD_NAME ]; then
 					echo -n "HDD" >>data_node_$1.csv
@@ -143,12 +150,12 @@ echo "D1=$D1" >>debug.log
 					if [ ${ARR3[0]} = $CEPH_SSD_NAME ]; then
 						echo -n "SSD" >>data_node_$1.csv
 					else
-						echo -n "???" >>data_node_$1.csv
+						echo -n "XXX" >>data_node_$1.csv
 					fi
 				fi
 # determine if full clone or linked clone
 				DNAME=${ARR3[1]}
-echo "DNAME=$DNAME, ${DNAME:0:4}" >>debug.log
+#echo "DNAME=$DNAME, ${DNAME:0:4}" >>debug.log
 				if [ "${DNAME:0:4}" = "base" ]; then
 					echo ";LC" >>data_node_$1.csv
 				else
@@ -188,7 +195,8 @@ echo "DNAME=$DNAME, ${DNAME:0:4}" >>debug.log
 # Finds the ratio of local storage used, called for every node
 function GetLocalStorage()
 {
-	if [ "$DEBUG" = "Y" ]; then echo "GetLocalStorage() node=$1"; fi
+	if [ "$DEBUG" = "Y" ]; then echo "FUNCTION $FUNCNAME -$1-">>debug.log ; fi
+
 	ApiCall GET /api2/json/nodes/$1/storage
 #	echo "response=$response"
 	jq '.data[]' <<<$response >/tmp/proxmox/storage_$1.json
@@ -212,7 +220,7 @@ function GetLocalStorage()
 # Called for every node
 function GetCPULoad()
 {
-	if [ "$DEBUG" = "Y" ]; then echo "GetCPULoad() node=$1"; fi
+	if [ "$DEBUG" = "Y" ]; then echo "FUNCTION $FUNCNAME -$1-">>debug.log ; fi
 
 	IFS=";"; while read -a ARRLOAD
 	do
@@ -230,7 +238,8 @@ function GetCPULoad()
 # This function does not print anything
 function FetchData()
 {
-	if [ "$DEBUG" = "Y" ]; then echo "FetchData()"; fi
+	if [ "$DEBUG" = "Y" ]; then echo "FUNCTION $FUNCNAME">>debug.log ; fi
+
 	echo "Gathering data, please wait..."
 # clean out old data
 	rm /tmp/proxmox/* 2>/dev/null
@@ -775,11 +784,11 @@ do
 
 # Migration of the created VM on all the nodes of the cluster
 	if [ "$DO_MIGRATE" = "Y" ]; then
-		echo " -migration"
 		((NODE_IDX++))
 		if [ $NODE_IDX = $NB_NODES ]; then
 			NODE_IDX=0
 		fi
+		echo " -migration NODE_IDX=$NODE_IDX"
 		NEW_NODE=${NODEARR[$NODE_IDX]}
 		if [ $NEW_NODE = $BASENODE ]; then
 			echo "$VMNAME: no migration"
