@@ -50,6 +50,8 @@ then
 fi
 source $TOKEN_FILE
 
+if [ "$DEBUG" = "Y" ]; then echo "LOGFILE $(date --iso-8601)"; fi >debug.log
+
 if [ "$CEPH_SSD_NAME" = "" ]; then
 	CEPH_SSD_NAME=ceph-ssd
 fi
@@ -125,12 +127,13 @@ function ProcessNode()
 	do
 		ID=${VM[0]}
 		ApiCall GET "/api2/json/nodes/$1/qemu/$ID/config"
+echo "response=$response" >>debug.log
 		DISK=$(jq -r '.data.scsi0' <<< "$response")
-#		echo "DISK=$DISK"
+		if [ "$DEBUG" = "Y" ]; then echo "node=$1 ID=$ID DISK=$DISK" >>debug.log; fi
 		IFS=","; while read -a ARR2
 		do
 			D1=${ARR2[0]}
-#			echo "D1=$D1"
+echo "D1=$D1" >>debug.log
 			IFS=":"; while read -a ARR3
 			do
 				echo -n "${VM[0]};${VM[1]};${VM[2]};${VM[3]};${VM[4]};" >>data_node_$1.csv
@@ -145,7 +148,7 @@ function ProcessNode()
 				fi
 # determine if full clone or linked clone
 				DNAME=${ARR3[1]}
-#				echo "DNAME=$DNAME, ${DNAME:0:4}"
+echo "DNAME=$DNAME, ${DNAME:0:4}" >>debug.log
 				if [ "${DNAME:0:4}" = "base" ]; then
 					echo ";LC" >>data_node_$1.csv
 				else
@@ -853,7 +856,7 @@ read
 }
 
 #================================================================
-# Show list of VM holding a given tag
+# Migration de VM
 function MoveVmDiskByTag()
 {
 	VTAG=$(zenity --list --height=300 --text="Quel tag?" --column="Tags" "${TAGARR[@]}")
@@ -960,14 +963,6 @@ function ViewGroups()
 # Show list of VM on a given node
 function ViewVmByNode()
 {
-# re-create an array holding the nodes names
-#	unset NODEARR
-#	declare -a NODEARR
-#	while read -a ARR
-#	do
-#		NODEARR+=(${ARR[0]})
-#	done < data_nodes.csv
-
 	VNODE=$(zenity --list --text="Quel node ?" --column="node" "${NODEARR[@]}")
 	if [ $? != 0 ]; then
 		echo "Interruption"; exit 1
@@ -999,6 +994,7 @@ function ViewVmByNode()
 		if [ ${#TAB[2]} = 0 ]; then TAGS="(no-tags)";fi
 		if [ "${TAB[5]}" = "SSD" ]; then ((NBSSD++)); fi
 		if [ "${TAB[5]}" = "HDD" ]; then ((NBHDD++)); fi
+echo "ID=${TAB[0]} - TAB[5]=${TAB[5]}" >>debug.log
 		printf " | %-16s | %10d | %13s |  %3s |  %2s  |\n" ${TAB[1]} ${TAB[0]} $TAGS ${TAB[5]} ${TAB[6]}
 	done <data_node_$VNODE.csv
 	printf "|------+----+------------------+------------+---------------+------+------|\n"
