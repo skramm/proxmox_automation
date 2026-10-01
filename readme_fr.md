@@ -149,8 +149,15 @@ On peut noter dans le dialogue l'affichage du taux d'occupation du stockage ceph
 On peut afficher la liste des VM et des "templates" d'un node via "Liste VMs par node", qui indique également leur état
 (vert: en fonctionnement, rouge: éteint).
 
-![ListeVMparnode](img/list_vm_node.jpg)
+![ListeVMparnode](img/pgvm_viewnode.png)
 
+La colonne `Disk` indique si la machine est sur un SSD ou un HDD,
+et la colonne `Type` indique s'il s'agit d'un "_Full Clone_" (FC) ou d'un "_Linked Clone_" (LC).
+Dans ce dernier cas, la dernière colonne indique l'ID de la VM de base, ainsi que le node sur lequel elle est localisée.
+
+On peut aussi afficher les VM via leur tag, qui affiche les mêmes information que ci-dessus:
+
+![ListeVMparTag](img/pgvm_viewtag.png)
 
 
 #### Création d'un ensemble de machines
