@@ -179,8 +179,14 @@ Par exemple `R123A` et `R123B`.
 
 Par défaut, les machines sont clonées à partir du template puis **déplacées** de façon homogène sur l'ensemble du cluster.
 Par exemple si on veut créer 10 VM sur un cluster de 3 serveurs, alors la 1ère sera placée sur la machine de base (où se situe le template), la 2è sur le serveur n°2, la 3è sur le serveur n°3, et la 4è sur le serveur n°1.
-L'idée étant que lors de l'utilisation, la charge soit répartie sur les différentes machines physique.
+L'idée étant que lors de l'utilisation, la charge soit répartie sur les différentes machines physiques.
 
+**Remarque** Cette migration de VM dès leur création n'est possible **QUE** si la VM n'a pas d'ISO rattachée comme disque.
+Si c'est le cas, toutes les VM resteront sur le même node.
+
+En effet, les ISO sont stockées localement sur un des serveurs et les VM sont donc dépendantes de cette ISO et ne peuvent être déplacées.
+
+(Il sera néamoins possible de les déplacer une par une via l'interface web, après avoir enlevé l'ISO).
 
 **Numérotation des clones**
 
