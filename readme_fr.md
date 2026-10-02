@@ -224,8 +224,12 @@ En l'état, on ne peut supprimer un ensemble de VM que par les tags.
 
 Attention, une machine peut avoir plusieurs tags (par exemple R123 et R456) et si on demande de supprimer toutes les VM avec le tag R456, alors celle-ci sera supprimée aussi.
 
+### Démarrage/Arrêt des VM
 
-## Détails technique
+L'option Start/Stop permet de démarrer ou d'arrêter un ensemble de VM
+
+
+## Détails techniques
 
 Via l'API, un ensemble de requetes va récupérer en JSON les détails sur toutes les machines de chaque node et les convertir en CSV.
 
@@ -235,6 +239,20 @@ Dans l'ordre:
 `api2/json/nodes/$1/qemu` on obtient tous les détails de chaque VM et template dans un fichier `data_node_NODENAME.csv`.
 - On parse ce fichier pour générer un fichier `data_template_NODENAME.csv`, contenant la liste des templates de ce node.
 
+## Troubleshooting
+
+- Problème de "locale" au démarrage  
+Si votre distrib est configurée avec le français comme langue par défaut, et que l'anglais n'est pas installé,
+vous aurez un message d'erreur au démarrage.
+En effet, l'API Proxmox renvoie les valeurs décimales avec le point (`.`) comme séparateur, au lieu de la virgule pour le français,
+il faut donc utiliser l'anglais pour les valeurs numériques (`LC_NUMERIC`).  
+Vous pouvez vérifier quelles sont les "locales" installées avec:  
+`$ locale -a`
+et vous devez avoir `en_US.utf8` dans la liste.  
+Quelques détails ici: https://serverfault.com/questions/54591/
+
+- En cas de dysfonctionnement autre, ajouter `DEBUG=Y` dans le fichier de "credentials".
+Ceci va générer à l'exécution un fichier `debug.log` dans le dossier courant, qui pourra donner des informations.
 
 ## FAQ
 
