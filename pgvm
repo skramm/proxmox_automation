@@ -286,11 +286,10 @@ function FetchData()
 		ProcessNode $NODE
 
 # step 1bis: create one data file per VM
-	IFS=";"; while read -a TAB
-	do
-		echo "${TAB[0]};${TAB[2]}" >data/vmid/id_${TAB[1]}
-	done < data_node_ALL.csv
-
+		IFS=";"; while read -a TAB
+		do
+			echo "${TAB[0]};${TAB[2]}" >data/vmid/id_${TAB[1]}
+		done < data_node_ALL.csv
 
 # step 2: build data file holding templates
 		IFS=";"; while read -a ARR

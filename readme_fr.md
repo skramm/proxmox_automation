@@ -154,9 +154,10 @@ On peut afficher la liste des VM et des "templates" d'un node via "Liste VMs par
 
 La colonne `Disk` indique si la machine est sur un SSD ou un HDD,
 et la colonne `Type` indique s'il s'agit d'un "_Full Clone_" (FC) ou d'un "_Linked Clone_" (LC).
-Dans ce dernier cas, la dernière colonne indique l'ID de la VM de base, ainsi que le node sur lequel elle est localisée.
+Dans ce dernier cas, la dernière colonne indique l'ID de la VM de base, ainsi que le node sur lequel elle est localisée
+(qui peut être différent du node affiché).
 
-On peut aussi afficher les VM via leur tag, qui affiche les mêmes information que ci-dessus:
+On peut aussi afficher les VM via leur tag, qui affiche les mêmes informations que ci-dessus:
 
 ![ListeVMparTag](img/pgvm_viewtag.png)
 
@@ -182,6 +183,8 @@ Par exemple: `R123-paul2ch`, `R123-faye7sim`, ...
 
 Attention: pas de caractère underscore (`_`) dans les noms des VM.
 
+Chaque VM se verra attribuer un numéro automatiquement ([voir ici](#numerotation)).
+
 Si le TP demande deux VM par étudiant, il faudra répéter la procédure de création et il faudra donner deux identifiants différents.
 Par exemple `R123A` et `R123B`.
 
@@ -189,19 +192,56 @@ Par défaut, les machines sont clonées à partir du template puis **déplacées
 Par exemple si on veut créer 10 VM sur un cluster de 3 serveurs, alors la 1ère sera placée sur la machine de base (où se situe le template), la 2è sur le serveur n°2, la 3è sur le serveur n°3, et la 4è sur le serveur n°1.
 L'idée étant que lors de l'utilisation, la charge soit répartie sur les différentes machines physiques.
 
-**Remarque** Cette migration de VM dès leur création n'est possible **QUE** si la VM n'a pas d'ISO rattachée comme disque.
+**Remarque**: Cette migration de VM dès leur création n'est possible **QUE** si la VM n'a pas d'ISO rattachée comme disque.
 Si c'est le cas, toutes les VM resteront sur le même node.
-
 En effet, les ISO sont stockées localement sur un des serveurs et les VM sont donc dépendantes de cette ISO et ne peuvent être déplacées.
 
-(Il sera néamoins possible de les déplacer une par une via l'interface web, après avoir enlevé l'ISO).
+(Il sera néanmoins possible de les déplacer une par une via l'interface web, après avoir enlevé l'ISO).
 
+
+#### Suppression d'un ensemble de VM
+
+En l'état, on ne peut supprimer un ensemble de VM que par les tags.
+
+Attention, une machine peut avoir plusieurs tags (par exemple R123 et R456) et si on demande de supprimer toutes les VM avec le tag R456, alors celle-ci sera supprimée aussi.
+
+### Démarrage/Arrêt des VM
+
+L'option Start/Stop permet de démarrer ou d'arrêter un ensemble de VM via un tag.
+
+
+## Détails techniques
+
+Via l'API, un ensemble de requetes va récupérer en JSON les détails sur toutes les machines de chaque node et les convertir en fichiers CSV, stockés dans le dossier courant.
+Ceci est réalisé par la fonction `FetchData()`, qui va procéder aux étapes suivantes:
+
+- Après avoir testé la réponse de l'API, on commence par un appel sur le "endpoint" `api2/json/nodes` qui renvoie la liste des nodes du cluster.
+- On peut ensuite itérer sur chacun des nodes (fonction `ProcessNode()`) via le "endpoint"
+`api2/json/nodes/$1/qemu`.
+On obtient tous les détails de chaque VM et template dans un fichier `data_node_NODENAME.csv`.  
+Ces fichiers ont la forme suivante:  
+```
+114;T-WIN-CC;2026,but3,cc;1;stopped;SSD;LC;114
+153;R207CL-nkuruabd;r207;0;stopped;SSD;FC;FC
+154;R207CL-outebmoh;r207;0;stopped;SSD;FC;FC
+155;R207CL-ozcanker;r207;0;stopped;SSD;FC;FC
+...
+```
+Le 4è champ indique s'il s'agit d'un "template" (1) ou d'une VM (0).
+Le 6è champ indique si c'est un _Linked Clone_ (LC) ou un _Full Clone_ (FC). Dans ce cas, le 7è champ donne l'ID de la VM contenant le disque base.
+- Ces "n" fichiers sont ensuite concaténés dans un unique fichier `data_node_ALL.csv`, contenant en plus le nom du node en tête de ligne.
+- On parse ce fichier pour générer "n" fichiers `data_template_NODENAME.csv`, contenant la liste des templates de ce node, qui sont concaténés dans un unique fichier `data_template_ALL.csv`.
+- La fonction `ProcessNode()` va également collecter l'ensemble tous les tags associés à chaque VM.
+Cette liste sera ensuite traitée pour avoir dans `data_tags.csv` une liste des tags de façon unique.
+On aura ensuite pour chaque tag un fichier `data_tag_TAG.csv` contenant la liste des VM (avec toutes leurs informations) ayant ce tag.
+- Un appel sur le endpoint `/api2/json/access/users` permet de récolter la liste de tous les utilisateurs avec leur groupe, ce qui va permettre de générer un fichier par groupe (`data_group_GROUPE.csv`), et un fichier global `data_users.csv`.
+
+<a name="numerotation"></a>
 **Numérotation des clones**
 
 Avec l'API, il n'y a pas génération automatique d'un ID (comme c'est le cas avec l'interface web), il faut en donner un dans la requete à l'API.
 Cet identifiant (entier) doit être unique sur tout le cluster.
-
-valeur max: 999999999 (9 chiffres)
+Valeur max: 999999999 (9 chiffres)
 
 Solution retenue:
 ```
@@ -218,26 +258,7 @@ Si le numéro global (`YYDDDXX01`) est déjà utilisé par une VM, un autre id p
 > [!CAUTION]
 > Cette solution implique que la taille des groupes d'étudiants ne peut pas dépasser 99.
 
-#### Suppression d'un ensemble de VM
 
-En l'état, on ne peut supprimer un ensemble de VM que par les tags.
-
-Attention, une machine peut avoir plusieurs tags (par exemple R123 et R456) et si on demande de supprimer toutes les VM avec le tag R456, alors celle-ci sera supprimée aussi.
-
-### Démarrage/Arrêt des VM
-
-L'option Start/Stop permet de démarrer ou d'arrêter un ensemble de VM
-
-
-## Détails techniques
-
-Via l'API, un ensemble de requetes va récupérer en JSON les détails sur toutes les machines de chaque node et les convertir en CSV.
-
-Dans l'ordre:
-- Après avoir testé la réponse de l'API, on commence par un appel sur le "endpoint" `api2/json/nodes` qui renvoie la liste des nodes du cluster.
-- On peut ensuite itérer sur chacun des nodes et via le "endpoint"
-`api2/json/nodes/$1/qemu` on obtient tous les détails de chaque VM et template dans un fichier `data_node_NODENAME.csv`.
-- On parse ce fichier pour générer un fichier `data_template_NODENAME.csv`, contenant la liste des templates de ce node.
 
 ## Troubleshooting
 
