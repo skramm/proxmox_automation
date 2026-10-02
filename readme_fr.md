@@ -130,7 +130,8 @@ Il est recommandé de démarrer à partir d'un dossier vide parce que l'ensemble
 
 ### Fonctionnalités
 
-Si tout est bon, le lancement affiche l'ensemble des informations de façon synthétique dans la console, puis propose un menu ressemblant à ceci (ici les nodes s'appellent `gerard`, `antonin` et `pierrick`):
+Si tout est bon, le lancement affiche l'ensemble des informations de façon synthétique dans la console, puis propose un menu ressemblant à ceci
+(ici les nodes s'appellent `gerard`, `antonin` et `pierrick`):
 
 ![dashboard1](img/dash1.jpg)
 
@@ -237,24 +238,25 @@ Dans l'ordre:
 
 ## FAQ
 
-- Q: Pourquoi ne pas avoir construit ceci sous la forme d'une commande CLI?
+- Q: Pourquoi ne pas avoir construit ceci sous la forme d'une commande CLI?  
 R: L'idée était de faire quelque chose de facile et intuitif de prise en main, mais sans imposer de "framework" lourd, donc l'utilisation de zenity, assez courant dans les distrib contemporaines, semblait une bonne idée.
 Mais il y avait des alternatives, notamment [dialog](https://linux.die.net/man/1/dialog), mais plus complexe à mettre en oeuvre.
 Je suis parti sur `zenity`, mais il y a des limitations:
 pas de "checkbox" notamment, contrairement à `dialog`.
 
-- Q: pourquoi ne pas avoir fait ça en Python? C'est plutot plus performant et souple.
-R:  Je suis plus à l'aise en Bash qu'en Python, c'est la seule raison.
+- Q: pourquoi ne pas avoir fait ça en Python? C'est plutot plus performant et souple.  
+R:  Je suis plus à l'aise en Bash qu'en Python, c'est la seule raison. Mais à l'usage, le problème de Bash, c'est surtout la lenteur
+(parsing de chaine, notamment).
 
-- Q: Est-ce que ceci est utilisable sous Windows avec WSL?
+- Q: Est-ce que ceci est utilisable sous Windows avec WSL?  
 R: Aucune idée, mais je suis preneur de retours!
 
-- Q: Pourquoi des affichages en français?
+- Q: Pourquoi des affichages en français?  
 R: L'idée initiale était de faciliter l'usage en interne (IUT Rouen/URN), mais à terme j'envisage une internationalisation
-(mais bon, c'est en bash, donc faut pas trop complexifier non plus...)
+(mais bon, c'est en Bash, donc faut pas trop complexifier non plus...)
 
-- Q: bizarre, le nom, non?
-R: oui, j'ai pas trouvé mieux...
+- Q: bizarre, le nom, non?  
+R: Oui, j'ai pas trouvé mieux...
 
 
 
