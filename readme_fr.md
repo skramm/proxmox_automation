@@ -17,20 +17,21 @@
 => Alors cet outil est pour vous!
 
 
-## Introduction
+## 1 - Introduction
 
-Nous disposons dans le département d'un hyperviseur "ProxMox", afin que les étudiants puissent disposer de VM pour des TP.
+Nous disposons dans le département d'un cluster de serveurs sur lequel est installé un hyperviseur "ProxMox", afin que les étudiants puissent disposer de VM pour des TP.
 
 L'interface web native est assez complète mais dans un cadre pédagogique, nous avons des besoins spécifiques qu'elle ne remplit pas.
 
 Pour des TP, nous avons besoin de pouvoir créer un ensemble de VM toutes identiques, typiquement une ou deux par étudiant, et basées sur un même "template", et auquel seul l'étudiant en question peut avoir accès.
-Avec l'interface web native, ceci est laborieux: ça implique de cloner les machines une par une, de les nommer, et leur assigner ensuite les permissions ("rôles").
+Avec l'interface web native, ceci est laborieux:
+ça implique de cloner les machines une par une, de les nommer, et leur assigner ensuite les permissions ("rôles").
 De plus, les VM à créer peuvent être différentes selon les TP, et certains TP peuvent nécessiter aussi de créer 2, voire 3 VM.
 
 Il n'est donc pas envisageable d'utiliser pour cela l'interface web native.
 La vue "_Server_" de celle-ci propose des actions globale via le bouton "_Bulk Actions_" mais c'est limité à la migration et à la mise en marche & extinction.
 
-D'autres solutions auraient pu être utilisées (probablement des outils comme Terraform?), l'approche utilisée ici a consisté à utiliser l'API HTTP directement, via `curl` depuis un script bash qui va itérer la création des clones.
+D'autres solutions auraient pu être utilisées (probablement des outils comme Terraform?), l'approche utilisée ici a consisté à utiliser l'API HTTP directement, via `curl` depuis un script bash qui va itérer la manipulation des clones.
 
 L'outil peut aussi être vu comme une supervision, il affiche le nombre de VM et de template par node, ainsi que le nombre de machines allumées et éteintes.
 Il peut aussi en une commande allumer ou éteindre un ensemble de machines identifiées via un tag, indépendamment de leur localisation sur un nœud.
@@ -49,9 +50,9 @@ Pour les collègues de l'URN, une doc générale de type "tuto" sur l'utilisatio
 - Référence API: https://pve.proxmox.com/pve-docs/api-viewer/
 - wiki: https://pve.proxmox.com/wiki/Proxmox_VE_API
 
-## Utilisation
+## 2 - Utilisation
 
-### Installation
+### 2.1 - Installation
 
 Il faut simplement s'assurer que vous avez les outils nécessaires (voir ci-dessous), puis soit cloner le dépot et exécuter
 ```
@@ -73,7 +74,7 @@ soit copier le fichier `pgvm` à un endroit référencé par le "path".
 Tout ceci est probablement déjà disponible par défaut dans votre distrib, et de tout façon leur présence est testée au démarrage.
 
 
-### Connection à l'API
+### 2.2 - Connection à l'API
 
 La connection à l'API implique d'avoir préalablement généré un "token API" via l'interface web de Proxmox.
 Une fois ce token obtenu, il faut le placer dans un fichier qui devra contenir les 6 définitions suivantes:
@@ -94,7 +95,7 @@ et `ZZZZ` par votre identifiant sur le domaine.
 Pour `APINODE`, mettre le nom d'une des machines du cluster.
 
 
-**Numéro de port**
+**Numéro de port**:
 Proxmox utilise par défaut le 8006, et c'est celui qui est utilisé ici par défaut, mais si jamais le gestionnaire du cluster a modifié ceci, il suffit d'ajouter dans le fichier la définition suivante avec le bon numéro:
 ```
 PORT=1234
@@ -128,7 +129,7 @@ Ceci va en premier tester la connection à l'API, et affiche un message d'erreur
 
 Il est recommandé de démarrer à partir d'un dossier vide parce que l'ensemble des infos extraites de l'API seront placées dans de nombreux fichiers csv qui vont donc remplir ce dossier.
 
-### Fonctionnalités
+### 2.3 - Fonctionnalités
 
 Si tout est bon, le lancement affiche l'ensemble des informations de façon synthétique dans la console, puis propose un menu ressemblant à ceci
 (ici les nodes s'appellent `gerard`, `antonin` et `pierrick`):
@@ -162,7 +163,7 @@ On peut aussi afficher les VM via leur tag, qui affiche les mêmes informations 
 ![ListeVMparTag](img/pgvm_viewtag.png)
 
 
-#### Création d'un ensemble de machines
+#### 2.3a - Création d'un ensemble de machines
 
 **Note 1**: il faut avoir préalablement construit une machine fonctionnelle et la convertir en template.
 Ceci se fait depuis l'interface web et n'est pas pris en charge ici.
@@ -199,18 +200,18 @@ En effet, les ISO sont stockées localement sur un des serveurs et les VM sont d
 (Il sera néanmoins possible de les déplacer une par une via l'interface web, après avoir enlevé l'ISO).
 
 
-#### Suppression d'un ensemble de VM
+#### 2.3b - Suppression d'un ensemble de VM
 
 En l'état, on ne peut supprimer un ensemble de VM que par les tags.
 
 Attention, une machine peut avoir plusieurs tags (par exemple R123 et R456) et si on demande de supprimer toutes les VM avec le tag R456, alors celle-ci sera supprimée aussi.
 
-### Démarrage/Arrêt des VM
+#### 2.3c - Démarrage/Arrêt des VM
 
 L'option Start/Stop permet de démarrer ou d'arrêter un ensemble de VM via un tag.
 
 
-## Détails techniques
+## 3 - Détails techniques
 
 Via l'API, un ensemble de requetes va récupérer en JSON les détails sur toutes les machines de chaque node et les convertir en fichiers CSV, stockés dans le dossier courant.
 Ceci est réalisé par la fonction `FetchData()`, qui va procéder aux étapes suivantes:
@@ -259,8 +260,7 @@ Si le numéro global (`YYDDDXX01`) est déjà utilisé par une VM, un autre id p
 > Cette solution implique que la taille des groupes d'étudiants ne peut pas dépasser 99.
 
 
-
-## Troubleshooting
+## 4 - Troubleshooting
 
 - Problème de "locale" au démarrage  
 Si votre distrib est configurée avec le français comme langue par défaut, et que l'anglais n'est pas installé,
@@ -275,7 +275,7 @@ Quelques détails ici: https://serverfault.com/questions/54591/
 - En cas de dysfonctionnement autre, ajouter `DEBUG=Y` dans le fichier de "credentials".
 Ceci va générer à l'exécution un fichier `debug.log` dans le dossier courant, qui pourra donner des informations.
 
-## FAQ
+## 5 - FAQ
 
 - Q: Pourquoi ne pas avoir construit ceci sous la forme d'une commande CLI?  
 R: L'idée était de faire quelque chose de facile et intuitif de prise en main, mais sans imposer de "framework" lourd, donc l'utilisation de zenity, assez courant dans les distrib contemporaines, semblait une bonne idée.
