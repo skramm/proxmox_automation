@@ -202,9 +202,12 @@ En effet, les ISO sont stockées localement sur un des serveurs et les VM sont d
 
 #### 2.3b - Suppression d'un ensemble de VM
 
-En l'état, on ne peut supprimer un ensemble de VM que par les tags.
+On peut supprimer tout un lot de VM via un tag donné.
+Il y a une demande de confirmation avant le lancement de la suppression, indiquant le nombre total de VM qui seront supprimées.
 
 Attention, une machine peut avoir plusieurs tags (par exemple R123 et R456) et si on demande de supprimer toutes les VM avec le tag R456, alors celle-ci sera supprimée aussi.
+
+Cette commande ne supprimera que les VM, mais pas les templates qui pourraient avoir le tag.
 
 #### 2.3c - Démarrage/Arrêt des VM
 
@@ -212,6 +215,8 @@ L'option Start/Stop permet de démarrer ou d'arrêter un ensemble de VM via un t
 
 
 ## 3 - Détails techniques
+
+### 3.1 - Fonctionnement général
 
 Via l'API, un ensemble de requetes va récupérer en JSON les détails sur toutes les machines de chaque node et les convertir en fichiers CSV, stockés dans le dossier courant.
 Ceci est réalisé par la fonction `FetchData()`, qui va procéder aux étapes suivantes:
@@ -237,8 +242,9 @@ Cette liste sera ensuite traitée pour avoir dans `data_tags.csv` une liste des 
 On aura ensuite pour chaque tag un fichier `data_tag_TAG.csv` contenant la liste des VM (avec toutes leurs informations) ayant ce tag.
 - Un appel sur le endpoint `/api2/json/access/users` permet de récolter la liste de tous les utilisateurs avec leur groupe, ce qui va permettre de générer un fichier par groupe (`data_group_GROUPE.csv`), et un fichier global `data_users.csv`.
 
+
 <a name="numerotation"></a>
-**Numérotation des clones**
+### 3.2 - Numérotation des clones
 
 Avec l'API, il n'y a pas génération automatique d'un ID (comme c'est le cas avec l'interface web), il faut en donner un dans la requete à l'API.
 Cet identifiant (entier) doit être unique sur tout le cluster.
@@ -259,6 +265,12 @@ Si le numéro global (`YYDDDXX01`) est déjà utilisé par une VM, un autre id p
 > [!CAUTION]
 > Cette solution implique que la taille des groupes d'étudiants ne peut pas dépasser 99.
 
+### 3.3 - Configuration des machines
+
+Le endpoint `/api2/json/nodes/NODE/qemu/VMID/config` permet de recuperer tous les détails sur une VM.
+La nature du disque et le type de clone (FC ou LC) peut être trouvé dans la réponse JSON.
+Mais selon les machines, cela peut être sous différentes clés: `scsi0` en général pour les VM Linux, et `ide0` ou `efidisk0` pour les machines Windows.
+Le script essaie de déterminer au mieux la nature du clone et du disque en fonction de la réponse.
 
 ## 4 - Troubleshooting
 

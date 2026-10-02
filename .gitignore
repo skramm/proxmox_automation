@@ -1,0 +1,4 @@
+data_*
+stdout
+*.log
+*.layout

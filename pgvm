@@ -132,10 +132,15 @@ function ProcessNode()
 		ID=${VM[0]}
 		ApiCall GET "/api2/json/nodes/$1/qemu/$ID/config"
 		if [ "$DEBUG" = "Y" ]; then echo -e "\n-node=$1 VMID=$ID config-response=$response" >>debug.log ;fi
+
 		DISK=$(jq -r '.data.scsi0' <<< "$response")
 		if [ "$DISK" = "null" ]; then
 			DISK=$(jq -r '.data.ide0' <<< "$response")
 		fi
+		if [ "$DISK" = "null" ]; then
+			DISK=$(jq -r '.data.efidisk0' <<< "$response")
+		fi
+
 		if [ "$DEBUG" = "Y" ]; then echo "node=$1 ID=$ID DISK=$DISK" >>debug.log; fi
 		IFS=","; while read -a ARR2
 		do
