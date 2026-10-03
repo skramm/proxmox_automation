@@ -888,7 +888,8 @@ read
 }
 
 #================================================================
-# Migration de VM (WIP!!!)
+# Migration du stockage de SSD=>HDD et inversement (WIP!!!)
+# ref: https://pve.proxmox.com/pve-docs/api-viewer/#/nodes/{node}/qemu/{vmid}/move_disk
 function MoveVmDiskByTag()
 {
 	VTAG=$(zenity --list --height=300 --text="Quel tag?" --column="Tags" "${TAGARR[@]}")
@@ -897,22 +898,38 @@ function MoveVmDiskByTag()
 	fi
 
 # Affichage du stockage actuel
+	NBHDD=0
+	NBSSD=0
+	IFS=";"; while read -a TAB
+	do
+		if [ ${TAB[6]} = HDD ]; then ((NBHDD++)); fi
+		if [ ${TAB[6]} = SSD ]; then ((NBSSD++)); fi
+	done < data_tag_$VTAG.csv
+	echo "Sur les $(wc -l<data_tag_$VTAG.csv) VMs avec ce tag, $NBHDD sont sur HDD, $NBSSD sont sur SSD"
 
 # question
-	echo "Migration des $(wc -l <data_tag_$VTAG.csv) VM vers XXX N (O/N)?"
-	read on
-	if [ $on = O ]; then
+	WHAT=$(zenity --list --title "Migration vers?" --column "Type de stockage" "HDD" "SSD")
+	TARGET_NAME=$CEPH_HDD_NAME
+	NB=$NBSSD
+	SOURCE=SSD
+	TARGET=HDD
+	if [ $WHAT = SSD ]; then
+		TARGET_NAME=$CEPH_SSD_NAME
+		NB=$NBHDD
+		SOURCE=HDD
+		TARGET=SSD
+	fi
+
+	DOIT=$(zenity --question --title "Ok pour migrer $NB VM de $SOURCE vers $TARGET?")
+	if [ $DOIT = 0 ]; then
 		IFS=";"; while read -a TAB
 		do
 			NODE=${TAB[0]}
 			VMID=${TAB[1]}
-			ApiCall POST /api2/json/nodes/$NODE/qemu/$VMID/move_disk?disk=????&node=$NODE&vmid=$VMID&target-disk=???
-
-
-
+			ApiCall POST /api2/json/nodes/$NODE/qemu/$VMID/move_disk?disk=????&node=$NODE&vmid=$VMID&target-disk=$TARGET_NAME
 		done <data_tag_$VTAG.csv
 	else
-		echo "annulation"
+		echo "Annulation"
 	fi
 }
 
