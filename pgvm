@@ -216,7 +216,7 @@ function GetLocalStorage()
 #	echo "response=$response"
 	jq '.data[]' <<<$response >/tmp/proxmox/storage_$1.json
 
-	jq -r '.storage + ";"+ (.used_fraction|tostring)' /tmp/proxmox/storage_$1.json >/tmp/proxmox/storage_$1.csv
+	jq -r '.storage + ";"+ (.used_fraction|tostring) + ";" + (.used|tostring)' /tmp/proxmox/storage_$1.json >/tmp/proxmox/storage_$1.csv
 	IFS=";"; while read -a ARRSTO
 	do
 		if [ "${ARRSTO[0]}" = "local" ]; then
@@ -430,13 +430,13 @@ function ShowNodes()
 #================================================================
 function ShowTemplates()
 {
-	echo -e "\n-Liste des $(wc -l<data_template_ALL.csv) templates:"
+	echo -e "\n-List of $(wc -l<data_template_ALL.csv) templates:"
 	printf "| %12s | %13s | %15s | %7s |\n" Node Name Tags VMid
 	echo "|--------------+---------------+-----------------+---------|"
 	IFS=";"; while read -a ARR
 	do
 		printf "| %12s | %13s | %15s | %7s |\n" ${ARR[0]} ${ARR[1]} ${ARR[2]} ${ARR[3]}
-	done < data_template_ALL.csv
+	done < data_template_ALL .csv
 	echo "|--------------+---------------+-----------------+---------|"
 }
 
@@ -485,7 +485,7 @@ function ShowTags()
 #================================================================
 function ShowGroups()
 {
-	echo -e "\n-Nb d'utilisateurs: $(wc -l <data_users.csv), répartis dans $(wc -l <data_groups.csv) groupes"
+	echo -e "\n-Nb d'users: $(wc -l <data_users.csv), in $(wc -l <data_groups.csv) groups"
 	echo -e "|         Group           | #Users |\n|-------------------------+--------|"
 	COMPT=0
 	IFS=";"; while read groupname
@@ -830,6 +830,8 @@ read
 # Delete a set of VM holding a given tag
 function DeleteVmByTag()
 {
+	if [ "$DEBUG" = "Y" ]; then echo "FUNCTION $FUNCNAME" >>debug.log ; fi
+
 	if ! [ -f data_tags.csv ]
 	then
 		echo "Erreur, fichier 'data_tags.csv' inaccessible"
@@ -892,6 +894,8 @@ read
 # ref: https://pve.proxmox.com/pve-docs/api-viewer/#/nodes/{node}/qemu/{vmid}/move_disk
 function MoveVmDiskByTag()
 {
+	if [ "$DEBUG" = "Y" ]; then echo "FUNCTION $FUNCNAME" >>debug.log ; fi
+
 	VTAG=$(zenity --list --height=300 --text="Quel tag?" --column="Tags" "${TAGARR[@]}")
 	if [ $? != 0 ]; then
 		echo "Interruption"; exit 1
@@ -970,8 +974,8 @@ function ViewVmByTag()
 	NBSSD=0
 
 	if ! [ "$DEBUG" = "Y" ]; then clear; fi
-	echo -e "\n-Liste des $(wc -l<data_tag_$VTAG.csv) machines ayant le tag '$VTAG':"
-	printf "| VM/T | Stat |      Node     |       Nom       |    VMId     |        Tags       | Disk | Type |      LC Disk      |\n";
+	echo -e "\n-List of $(wc -l<data_tag_$VTAG.csv) machines having tag '$VTAG':"
+	printf "| VM/T | Stat |      Node     |       Name      |    VMId     |        Tags       | Disk | Type |      LC Disk      |\n";
 	printf "|------+------+---------------+-----------------+-------------+-------------------+------+------+-------------------|\n"
 
 	IFS=";"; while read -a TAB
@@ -996,7 +1000,7 @@ function ViewVmByTag()
 
 	done <data_tag_$VTAG.csv
 	printf "|------+------+---------------+-----------------+-------------+-------------------+------+------+-------------------|\n"
-	echo "Bilan: $NBT templates et $NBVM VM, dont $NBON en fonctionnement. Stockage: $NBHDD/HDD, $NBSSD/SSD"
+	echo "Summary: $NBT templates and $NBVM VM, with $NBON running. Storage: $NBHDD/HDD, $NBSSD/SSD"
 }
 
 
@@ -1050,8 +1054,8 @@ function ViewVmByNode()
 	fi
 
 	if ! [ "$DEBUG" = "N" ]; then clear; fi
-	echo -e "\n-Liste des $(wc -l<data_node_$VNODE.csv) machines du node '$VNODE': (FC:Full Clone, LC: Linked Clone)"
-	printf "| VM/T |    |        Nom       |    VMId    |       Tags        | Disk | Type |      LC Disk      |\n";
+	echo -e "\n-List of $(wc -l<data_node_$VNODE.csv) machines on node '$VNODE': (FC:Full Clone, LC: Linked Clone)"
+	printf "| VM/T |    |        Name      |    VMId    |       Tags        | Disk | Type |      LC Disk      |\n";
 	printf "|------+----+------------------+------------+-------------------+------+------|-------------------|\n"
 	NBON=0
 	NBSSD=0
@@ -1084,7 +1088,61 @@ function ViewVmByNode()
 
 	NBTOT=$(wc -l <data_node_$VNODE.csv)
 	((NBVM=NBTOT-NBT))
-	echo "Bilan: $NBT templates et $NBVM VM, dont $NBON en fonctionnement. Stockage: $NBSSD/SSD,  $NBHDD/HDD"
+	echo "Summary: $NBT templates and $NBVM VM, with $NBON running. Storage: $NBSSD/SSD,  $NBHDD/HDD"
+}
+
+#================================================================
+# Check if VM id given as arg exist
+function checkVM()
+{
+	IFS=";"; while read -a TAB2
+	do
+#		echo " - check with ${TAB2[1]}"
+		if [ "${TAB2[1]}" = "$1" ]; then return 0; fi
+	done < data_node_ALL.csv
+	return 1  # not found !
+}
+
+#------------------------------------------------------
+# arg: csv filename holding either HDD or SSD disk data
+function checkCEPH()
+{
+	NBD_ORPHAN=0
+	TOT_SIZE=0
+	IFS=";"; while read -a TAB
+	do
+#		echo "Checking machine ${TAB[0]} size=${TAB[1]} s_MB = $(bc <<< ${TAB[1]}/1000000) TOT_SIZE=$TOT_SIZE"
+		checkVM ${TAB[0]}
+#		if [ $? != 0 ]; then ((NBD_ORPHAN++)); ((TOT_SIZE+=$(bc <<< ${TAB[1]}/1000000) )); fi
+		if [ $? != 0 ]; then ((NBD_ORPHAN++)); ((TOT_SIZE+=${TAB[1]})); fi
+
+	done <$1
+#	echo "TOT_SIZE=$TOT_SIZE"
+#	TSIZEM=$(bc <<< $TOT_SIZE/1000000)
+	TSIZEG=$(bc <<< $TOT_SIZE/1000000000)
+	echo "Nb of VM disks on $2 storage: $(wc -l < $1), with $NBD_ORPHAN orphaned disks, using $TSIZEG GB"
+}
+
+#------------------------------------------------------
+function ViewStorageDetails()
+{
+	if [ "$DEBUG" = "Y" ]; then echo "FUNCTION $FUNCNAME" >>debug.log ; fi
+
+	echo "Gathering detailed storage data..."
+# CEPH
+	ApiCall GET "/api2/json/nodes/$APINODE/storage/$CEPH_SSD_NAME/content"
+	jq -r '.data[]' <<< "$response" >/tmp/proxmox/storage_SSD.json
+	jq -r '(.vmid|tostring) + ";" + (.size|tostring) + ";" + (.parent//"0") + ";" + .name' </tmp/proxmox/storage_SSD.json >data_storage_SSD.csv
+
+	ApiCall GET "/api2/json/nodes/$APINODE/storage/$CEPH_HDD_NAME/content"
+	jq -r '.data[]' <<< "$response" >/tmp/proxmox/storage_HDD.json
+	jq -r '(.vmid|tostring) + ";" + (.size|tostring) + ";" + (.parent//"0") + ";" + .name' </tmp/proxmox/storage_HDD.json >data_storage_HDD.csv
+
+	echo "Processing data..."
+	checkCEPH data_storage_SSD.csv SSD
+	checkCEPH data_storage_HDD.csv HDD
+
+	echo "done"
 }
 
 #================================================================
@@ -1134,7 +1192,7 @@ mkdir -p /tmp/proxmox
 
 # test de la réponse de l'API
 
-echo -n "-Test de la réponse de l'API: "
+echo -n "-Test of Proxmox API response: "
 ping -c 1 ${APINODE}.${DOMAIN} 1>/dev/null 2>/dev/null
 if ! [ $? = 0 ]; then
 	echo "Error: DNS failure on ${APINODE}.${DOMAIN}"
@@ -1178,16 +1236,17 @@ done <data_storage_ceph.csv
 CEPH_SSD=$(bc <<< $STO_SSD*100)
 CEPH_HDD=$(bc <<< $STO_HDD*100)
 
-items=("Affichage Dashboard" \
-	"Liste VMs par node" \
-	"Liste VMs par tag" \
-	"Création VMs" \
-	"Suppression VMs par tag" \
-	"Start/Stop par tag" \
-	"Liste des users par groupe")
+items=("Show Dashboard" \
+	"List VMs by node" \
+	"List VMs by tag" \
+	"Create VM set" \
+	"Delete VM by tag" \
+	"Start/Stop by tag" \
+	"Storage details" \
+	"List of users in groups")
 
 # option -v: string gets stored in variable
-printf -v CEPH "Stockage ceph: hdd=%.2f%% ssd=%.2f%%" $CEPH_HDD $CEPH_SSD
+printf -v CEPH "Storage ceph: hdd=%.2f%% ssd=%.2f%%" $CEPH_HDD $CEPH_SSD
 
 while item=$(zenity --height=400 --width=300 --list \
 	--title="Commandes" \
@@ -1205,7 +1264,8 @@ do
 		"${items[3]}") CreateVmSet; FetchData; ShowDashboard;;
 		"${items[4]}") DeleteVmByTag; FetchData; ShowDashboard;;
 		"${items[5]}") StartStop; FetchData;;
-		"${items[6]}") ViewGroups;;
+		"${items[6]}") ViewStorageDetails;;
+		"${items[7]}") ViewGroups;;
 		*) echo "Ooops! Invalid option.";;
 	esac
 done
