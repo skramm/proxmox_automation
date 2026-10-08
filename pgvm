@@ -46,7 +46,10 @@ then
 fi
 source $TOKEN_FILE
 
-if [ "$DEBUG" = "Y" ]; then echo "LOGFILE $(date --iso-8601)"; fi >debug.log
+TODAY=$(date '+%Y%m%d_%H%M%S')
+LOGFILE=pgvm_$TODAY.log
+
+if [ "$DEBUG" = "Y" ]; then echo "DEBUGFILE $(date --iso-8601)"; fi >debug.log
 
 if [ "$CEPH_SSD_NAME" = "" ]; then
 	CEPH_SSD_NAME=ceph-ssd
@@ -485,7 +488,7 @@ function ShowTags()
 #================================================================
 function ShowGroups()
 {
-	echo -e "\n-Nb d'users: $(wc -l <data_users.csv), in $(wc -l <data_groups.csv) groups"
+	echo -e "\n-Nb of users: $(wc -l <data_users.csv), in $(wc -l <data_groups.csv) groups"
 	echo -e "|         Group           | #Users |\n|-------------------------+--------|"
 	COMPT=0
 	IFS=";"; while read groupname
@@ -569,10 +572,10 @@ function StartStop()
 					NODE=${TAB[0]}
 					VMID=${TAB[1]}
 					if [ "$ACTION" = "Stop" ]; then
-						echo "Stopping VM n°$VMID"
+						echo "Stopping VM n°$VMID named ${TAB[2]}, running on node $NODE" | tee -a $LOGFILE
 						ApiCall POST "/api2/json/nodes/$NODE/qemu/$VMID/status/shutdown?forceStop=1"
 					else
-						echo "Starting VM n°$VMID"
+						echo "Starting VM n°$VMID, named ${TAB[2]}, running on node $NODE" | tee -a $LOGFILE
 						ApiCall POST "/api2/json/nodes/$NODE/qemu/$VMID/status/start"
 					fi
 				fi
@@ -585,7 +588,6 @@ function StartStop()
 #================================================================
 function CreateVmSet()
 {
-
 	if [ "$DEBUG" = "Y" ]; then echo "FUNCTION $FUNCNAME" >>debug.log ; fi
 
 # --------------------------------
@@ -595,16 +597,16 @@ function CreateVmSet()
 DONE=NO
 while [ $DONE = NO ]
 do
-	BASENODE=$(zenity --list --text="Choisissez le noeud où se trouve le\ntemplate et où créer les VMs" --column="nodes" ${NODEARR[@]})
+	BASENODE=$(zenity --list --text="Select node on which is the\ntemplate" --column="Nodes" ${NODEARR[@]})
 	if [ $? != 0 ]; then
 		echo "Interruption"; exit 1
 	fi
 
-	echo "BASENODE=$BASENODE"
+#	echo "BASENODE=$BASENODE"
 
 	if ! [ -f data_template_$BASENODE.csv ]
 	then
-		echo "Aucun template disponible sur le noeud '$BASENODE'"
+		echo "No template available on node '$BASENODE'!"
 	else
 		DONE=YES
 	fi
@@ -622,11 +624,11 @@ done < data_template_$BASENODE.csv
 
 #echo "t=${TEMPLATES[@]}"
 
-TEMPLATE=$(zenity --list --text="Quel template à utiliser?" --column="templates" ${TEMPLATES[@]})
+TEMPLATE=$(zenity --list --text="Which template?" --column="Templates" ${TEMPLATES[@]})
 if [ $? != 0 ]; then
 	echo "Interruption"; exit 1
 fi
-echo "TEMPLATE=$TEMPLATE"
+#echo "TEMPLATE=$TEMPLATE"
 
 # récupération du vmid du template
 IFS=";"; while read -a ARR
@@ -637,36 +639,36 @@ do
 	fi
 done < data_template_$BASENODE.csv
 
-echo "TVMID=$TVMID"
+#echo "TVMID=$TVMID"
 
 DONE=NO
 while [ $DONE = NO ]
 do
-	MOD=$(zenity --entry --text "Donner le nom du module (RXXX, SAETTT)\n(servira pour le nom des VM)")
+	MOD=$(zenity --entry --text "Enter root VM name (RXXX, SAETTT)")
 	if [ $? != 0 ]; then
 		echo "Interruption"; exit 1
 	fi
 	if [ ${#MOD} = 0 ]; then
-		echo "Erreur, ne peut pas rester vide!"
+		echo "Error, cannot be empty!"
 	else
 		DONE=YES
 	fi
 done
 
-echo "MOD=$MOD"
+#echo "MOD=$MOD"
 
 
 DONE=NO
 while [ $DONE = NO ]
 do
 
-	TAGS=$(zenity --entry --text "Donner les tags à associer aux VMs, séparés par des virgules\n(pas d'espaces dans les tags!!)")
+	TAGS=$(zenity --entry --text "Enter tags, comma separated\nno space in the tags!)")
 	if [ $? != 0 ]; then
 		echo "Interruption"; exit 1
 	fi
 	echo "TAGS=$TAGS"
 	if [ ${#TAGS} = 0 ]; then
-		echo "Erreur, donner au moins un tag!"
+		echo "Error, give at least one tag!"
 	else
 		DONE=YES
 	fi
@@ -706,7 +708,7 @@ do
 done < data_groups.csv
 #echo "GROUPARR=${GROUPARR[@]}"
 
-GROUPSEL=$(zenity --list --text "Quel groupe d'utilisateurs?" --column="Groupe" ${GROUPARR[@]} )
+GROUPSEL=$(zenity --list --text "Which user group?" --column="Groupe" ${GROUPARR[@]} )
 if [ $? != 0 ]; then
 	echo "Interruption"; exit 1
 fi
@@ -715,28 +717,23 @@ fi
 # make sure the group size is not >99
 GRSIZE=$(wc -l <data_group_${GROUPSEL}.csv)
 if [ $GRSIZE -gt 99 ]; then
-	echo "Erreur, taille du groupe > 99";
+	echo "Error, group size > 99, cannot proceed!";
 	exit 1
 fi
 
-zenity --question --text "Faut-il donner les droit sur ces VM à un autre groupe d'utilisateurs?"
-if [ $? = 0 ]; then
-	OTHERGROUP=$(zenity --list --text "Quel groupe d'utilisateurs?" --column="Groupe" ${GROUPARR[@]} )
-	if [ $? != 0 ]; then
-		echo "Interruption"; exit 1
-	fi
-	echo "OTHERGROUP=$OTHERGROUP"
-fi
+#zenity --question --text "Faut-il donner les droit sur ces VM à un autre groupe d'utilisateurs?"
+#if [ $? = 0 ]; then
+#	OTHERGROUP=$(zenity --list --text "Quel groupe d'utilisateurs?" --column="Groupe" ${GROUPARR[@]} )
+#	if [ $? != 0 ]; then
+#		echo "Interruption"; exit 1
+#	fi
+#	echo "OTHERGROUP=$OTHERGROUP"
+#fi
 
 VMNAMES="${MOD}-XXX (avec XXX l'id user)"
 NB=$(wc -l <data_group_${GROUPSEL}.csv)
 
-MSGT="Ok pour créer $NB VM\n- sur le node $BASENODE,\n- nommées ${VMNAMES},\n- basées sur le template $TEMPLATE,\n- "
-if [ ${#TAGS} = 0 ]; then
-	MSGT=${MSGT}"sans tags associés?"
-else
-	MSGT=${MSGT}"ayant les tags '$TAGS'?'"
-fi
+MSGT="Ok to create $NB VM\n- on node $BASENODE,\n- named ${VMNAMES},\n- based on template $TEMPLATE,\n- with tags '$TAGS'?'"
 
 START=$(zenity --question --text "$MSGT")
 if [ $? != 0 ]; then
@@ -748,7 +745,7 @@ fi
 # --------------------------------
 	if [ "$DEBUG" = "Y" ]; then echo "FUNCTION $FUNCNAME, start cloning..." >>debug.log ; fi
 
-TODAY=$(date '+%Y%m%d_%H%M%S')
+
 NUMA=1
 NODE_IDX=0
 
@@ -768,7 +765,8 @@ do
 	fi
 	DESC="VM Cloned from template $TEMPLATE (VMId=$TVMID), created on $TODAY by user $PVUSER"
 
-	echo " -Clonage VM depuis $TEMPLATE, nom=$VMNAME"
+	echo " -Cloning VM $VMNAME (ID=$VMID) from $TEMPLATE" | tee -a $LOGFILE
+
 # ref: https://pve.proxmox.com/pve-docs/api-viewer/#/nodes/{node}/qemu/{vmid}/clone
 	response=$(curl -k \
 		--silent -X POST \
@@ -783,7 +781,7 @@ do
 	CheckError
 	echo "response=$response"
 
-	echo " -Ajout des tags"
+	echo " -Adding tags"
 	ApiCall POST "/api2/json/nodes/$BASENODE/qemu/$VMID/config?node=$BASENODE&vmid=$VMID&tags=$TAGS"
 	echo "response=$response"
 
@@ -807,7 +805,7 @@ do
 		if [ $NODE_IDX = $NB_NODES ]; then
 			NODE_IDX=0
 		fi
-		echo " -migration NODE_IDX=$NODE_IDX"
+		echo " -migrate NODE_IDX=$NODE_IDX"
 		NEW_NODE=${NODEARR[$NODE_IDX]}
 		if [ $NEW_NODE = $BASENODE ]; then
 			echo "$VMNAME: no migration"
@@ -834,12 +832,12 @@ function DeleteVmByTag()
 
 	if ! [ -f data_tags.csv ]
 	then
-		echo "Erreur, fichier 'data_tags.csv' inaccessible"
+		echo "Error, no file 'data_tags.csv'"
 		exit 1
 	fi
 
 	TAGDEL=$(zenity --list --height=300 \
-		--text="Quel machines ayant le tag ci-dessous souhaitez-vous détruire?" --column="tags" ${TAGARR[@]})
+		--text="What machines having tag below do you want to erase?" --column="tags" ${TAGARR[@]})
 	if [ $? != 0 ]; then
 		echo "Interruption"; exit 1
 	fi
@@ -853,7 +851,7 @@ function DeleteVmByTag()
 	done < data_tag_${TAGDEL}.csv
 
 	zenity --question --text \
-		"Ok pour effacer les ${COUNT} VMs associées au tag $TAGDEL?"
+		"Ok to  erase ${COUNT} VMs associated with tag $TAGDEL?"
 	if [ $? != 0 ]; then
 		echo "Interruption"; exit 1
 	fi
@@ -874,9 +872,9 @@ do
 #				echo "node ${TAB[0]}: machine ${TAB[2]}, tag=$tag"
 			if [ $tag = $TAGDEL ]; then
 				if [ "${TAB[4]}" = "1" ]; then
-					echo "node ${TAB[0]}: machine ${TAB[2]}, id=${TAB[1]} est un template, pas de suppression"
+					echo "node ${TAB[0]}: machine ${TAB[2]}, id=${TAB[1]} is a template, no removal" | tee -a $LOGFILE
 				else
-					echo "node ${TAB[0]}: suppression machine ${TAB[2]}, id=${TAB[1]}"
+					echo "node ${TAB[0]}: erasing VM ${TAB[2]}, id=${TAB[1]}" | tee -a $LOGFILE
 					ApiCall DELETE "/api2/json/nodes/${TAB[0]}/qemu/${TAB[1]}?node=${TAB[0]}&vmid=${TAB[1]}"
 					((COMPT++))
 				fi
@@ -885,7 +883,7 @@ do
 	fi
 done <data_node_ALL.csv
 
-echo "-$COMPT VM supprimées, appuyer sur une touche"
+echo "-$COMPT VM deleted, press a key"
 read
 }
 
@@ -896,7 +894,7 @@ function MoveVmDiskByTag()
 {
 	if [ "$DEBUG" = "Y" ]; then echo "FUNCTION $FUNCNAME" >>debug.log ; fi
 
-	VTAG=$(zenity --list --height=300 --text="Quel tag?" --column="Tags" "${TAGARR[@]}")
+	VTAG=$(zenity --list --height=300 --text="What tag?" --column="Tags" "${TAGARR[@]}")
 	if [ $? != 0 ]; then
 		echo "Interruption"; exit 1
 	fi
@@ -909,10 +907,10 @@ function MoveVmDiskByTag()
 		if [ ${TAB[6]} = HDD ]; then ((NBHDD++)); fi
 		if [ ${TAB[6]} = SSD ]; then ((NBSSD++)); fi
 	done < data_tag_$VTAG.csv
-	echo "Sur les $(wc -l<data_tag_$VTAG.csv) VMs avec ce tag, $NBHDD sont sur HDD, $NBSSD sont sur SSD"
+	echo "On the $(wc -l<data_tag_$VTAG.csv) VMs with that tag, $NBHDD are on HDD, $NBSSD on SSD"
 
 # question
-	WHAT=$(zenity --list --title "Migration vers?" --column "Type de stockage" "HDD" "SSD")
+	WHAT=$(zenity --list --title "Migrate on?" --column "Storage type" "HDD" "SSD")
 	TARGET_NAME=$CEPH_HDD_NAME
 	NB=$NBSSD
 	SOURCE=SSD
@@ -924,16 +922,17 @@ function MoveVmDiskByTag()
 		TARGET=SSD
 	fi
 
-	DOIT=$(zenity --question --title "Ok pour migrer $NB VM de $SOURCE vers $TARGET?")
+	DOIT=$(zenity --question --title "Ok to move $NB VM from $SOURCE to $TARGET?")
 	if [ $DOIT = 0 ]; then
 		IFS=";"; while read -a TAB
 		do
 			NODE=${TAB[0]}
 			VMID=${TAB[1]}
+			echo "Migrate disk of VM $VMID named XXX on node $NODE from $SOURCE to $TARGET" | tee -a $LOGFILE
 			ApiCall POST /api2/json/nodes/$NODE/qemu/$VMID/move_disk?disk=????&node=$NODE&vmid=$VMID&target-disk=$TARGET_NAME
 		done <data_tag_$VTAG.csv
 	else
-		echo "Annulation"
+		echo "Cancel"
 	fi
 }
 
@@ -963,7 +962,7 @@ function PrintDiskCloneType()
 # Show list of VM holding a given tag
 function ViewVmByTag()
 {
-	VTAG=$(zenity --list --height=300 --text="Quel tag?" --column="Tags" "${TAGARR[@]}")
+	VTAG=$(zenity --list --height=300 --text="What tag?" --column="Tags" "${TAGARR[@]}")
 	if [ $? != 0 ]; then
 		echo "Interruption"; exit 1
 	fi
@@ -1016,14 +1015,14 @@ function ViewGroups()
 		GROUPARR+=($group)
 	done < data_groups.csv
 
-	GROUPARR+=("(Sans groupe)")
+	GROUPARR+=("(No group)")
 
-	GROUP=$(zenity --list --height=300 --text="Quel groupe?" --column="groupes" "${GROUPARR[@]}")
+	GROUP=$(zenity --list --height=300 --text="What group?" --column="Groups" "${GROUPARR[@]}")
 	if [ $? != 0 ]; then
 		echo "Interruption"; exit 1
 	fi
 
-	if [ "$GROUP" = "(Sans groupe)" ]; then
+	if [ "$GROUP" = "(No group)" ]; then
 		GROUPFILE=data_group_NOGROUP.csv
 	else
 		GROUPFILE=data_group_$GROUP.csv
@@ -1031,7 +1030,7 @@ function ViewGroups()
 
 	if ! [ "$DEBUG" = "Y" ]; then clear; fi
 	GROUPSIZE=$(wc -l <$GROUPFILE)
-	echo "-Groupe '$GROUP': $GROUPSIZE utilisateurs"
+	echo "-Group '$GROUP': $GROUPSIZE users"
 
 	printf "|       Id       |                   email                  |\n";
 	printf "|----------------+------------------------------------------|\n"
@@ -1048,7 +1047,7 @@ function ViewGroups()
 # Show list of VM on a given node
 function ViewVmByNode()
 {
-	VNODE=$(zenity --list --text="Quel node ?" --column="node" "${NODEARR[@]}")
+	VNODE=$(zenity --list --text="What node ?" --column="Node" "${NODEARR[@]}")
 	if [ $? != 0 ]; then
 		echo "Interruption"; exit 1
 	fi
@@ -1130,7 +1129,7 @@ function ViewStorageDetails()
 {
 	if [ "$DEBUG" = "Y" ]; then echo "FUNCTION $FUNCNAME" >>debug.log ; fi
 
-	echo "Gathering detailed storage data..."
+	echo "Gathering detailed CEPH storage data..."
 # CEPH
 	ApiCall GET "/api2/json/nodes/$APINODE/storage/$CEPH_SSD_NAME/content"
 	jq -r '.data[]' <<< "$response" >/tmp/proxmox/storage_SSD.json
@@ -1171,7 +1170,7 @@ function ViewStorageDetails()
 	IFS=";"; while read -a TAB
 	do
 		if [ ${TAB[0]} = $ANSWER ]; then
-			echo " -Delete volume ${TAB[4]}"
+			echo " -Delete volume ${TAB[4]} (${TAB[3]})" | tee -a $LOGFILE
 #		ApiCall DELETE "/api2/json/nodes/$APINODE/storage/$CEPH_NAME/content/${TAB[3]}"
 		fi
 	done <$data_orphaned_disks.csv
