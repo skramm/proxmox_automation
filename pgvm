@@ -535,17 +535,17 @@ function StartStop()
 {
 	if [ "$DEBUG" = "Y" ]; then echo "FUNCTION $FUNCNAME" >>debug.log ; fi
 
-	VTAG=$(zenity --list --height=300 --text="Quel tag?" --column="Tags" "${TAGARR[@]}")
+	VTAG=$(zenity --list --height=300 --text="What tag?" --column="Tags" "${TAGARR[@]}")
 	if [ $? != 0 ]; then
-		echo "Interruption"; exit 1
+		echo "Cancel"; return 1
 	fi
-	ACTION=$(zenity --list --text="Start ou Stop?" --column="Action" "Start" "Stop")
+	ACTION=$(zenity --list --text="Start, Stop, or immediate shutdown?" --column="Action" "Start" "Stop" "Shutdown")
 	if [ $? != 0 ]; then
-		echo "Interruption"; exit 1
+		echo "Cancel"; return 1
 	fi
 
 	if ! [ -f data_tag_$VTAG.csv ]; then
-		echo "Erreur, fichier data_tag_$VTAG.csv introuvable !"; exit 1
+		echo "Error, file data_tag_$VTAG.csv missing!"; exit 1
 	fi
 
 	COUNT=0
@@ -571,11 +571,10 @@ function StartStop()
 				if [ ${TAB[3]} == 0 ]; then
 					NODE=${TAB[0]}
 					VMID=${TAB[1]}
+					echo "${ACTION}ing VM n°$VMID named ${TAB[2]}, running on node $NODE" | tee -a $LOGFILE
 					if [ "$ACTION" = "Stop" ]; then
-						echo "Stopping VM n°$VMID named ${TAB[2]}, running on node $NODE" | tee -a $LOGFILE
 						ApiCall POST "/api2/json/nodes/$NODE/qemu/$VMID/status/shutdown?forceStop=1"
 					else
-						echo "Starting VM n°$VMID, named ${TAB[2]}, running on node $NODE" | tee -a $LOGFILE
 						ApiCall POST "/api2/json/nodes/$NODE/qemu/$VMID/status/start"
 					fi
 				fi
@@ -599,7 +598,7 @@ while [ $DONE = NO ]
 do
 	BASENODE=$(zenity --list --text="Select node on which is the\ntemplate" --column="Nodes" ${NODEARR[@]})
 	if [ $? != 0 ]; then
-		echo "Interruption"; exit 1
+		echo "Cancel"; return 1
 	fi
 
 #	echo "BASENODE=$BASENODE"
@@ -626,7 +625,7 @@ done < data_template_$BASENODE.csv
 
 TEMPLATE=$(zenity --list --text="Which template?" --column="Templates" ${TEMPLATES[@]})
 if [ $? != 0 ]; then
-	echo "Interruption"; exit 1
+	echo "Cancel"; return 1
 fi
 #echo "TEMPLATE=$TEMPLATE"
 
@@ -646,7 +645,7 @@ while [ $DONE = NO ]
 do
 	MOD=$(zenity --entry --text "Enter root VM name (RXXX, SAETTT)")
 	if [ $? != 0 ]; then
-		echo "Interruption"; exit 1
+		echo "Cancer"; return 1
 	fi
 	if [ ${#MOD} = 0 ]; then
 		echo "Error, cannot be empty!"
@@ -664,7 +663,7 @@ do
 
 	TAGS=$(zenity --entry --text "Enter tags, comma separated\nno space in the tags!)")
 	if [ $? != 0 ]; then
-		echo "Interruption"; exit 1
+		echo "Cancel"; return 1
 	fi
 	echo "TAGS=$TAGS"
 	if [ ${#TAGS} = 0 ]; then
@@ -710,7 +709,7 @@ done < data_groups.csv
 
 GROUPSEL=$(zenity --list --text "Which user group?" --column="Groupe" ${GROUPARR[@]} )
 if [ $? != 0 ]; then
-	echo "Interruption"; exit 1
+	echo "Cancel"; return 1
 fi
 #echo "GROUPSEL=$GROUPSEL"
 
@@ -718,7 +717,7 @@ fi
 GRSIZE=$(wc -l <data_group_${GROUPSEL}.csv)
 if [ $GRSIZE -gt 99 ]; then
 	echo "Error, group size > 99, cannot proceed!";
-	exit 1
+	echo "Cancel"; return 1
 fi
 
 #zenity --question --text "Faut-il donner les droit sur ces VM à un autre groupe d'utilisateurs?"
@@ -737,7 +736,7 @@ MSGT="Ok to create $NB VM\n- on node $BASENODE,\n- named ${VMNAMES},\n- based on
 
 START=$(zenity --question --text "$MSGT")
 if [ $? != 0 ]; then
-	echo "Interruption"; exit 1
+	echo "Cancel"; return 1
 fi
 
 # --------------------------------
@@ -779,13 +778,13 @@ do
 		--data-urlencode description="$DESC")
 	err=$?
 	CheckError
-	echo "response=$response"
+	echo "response=$response" | tee -a $LOGFILE
 
-	echo " -Adding tags"
+	echo " -Adding tags" | tee -a $LOGFILE
 	ApiCall POST "/api2/json/nodes/$BASENODE/qemu/$VMID/config?node=$BASENODE&vmid=$VMID&tags=$TAGS"
 	echo "response=$response"
 
-	echo " -configuration permissions (roles)"
+	echo " -configuration permissions (roles)" | tee -a $LOGFILE
 # ref: https://pve.proxmox.com/pve-docs/api-viewer/#/access/acl
 	response=$(curl --insecure --silent \
 		-X PUT \
@@ -797,7 +796,7 @@ do
 		"https://${APINODE}.${DOMAIN}:${PORT}/api2/json/access/acl")
 	err=$?
 	CheckError
-	echo "response=$response"
+	echo "response=$response" | tee -a $LOGFILE
 
 # Migration of the created VM on all the nodes of the cluster
 	if [ "$DO_MIGRATE" = "Y" ]; then
@@ -808,9 +807,9 @@ do
 		echo " -migrate NODE_IDX=$NODE_IDX"
 		NEW_NODE=${NODEARR[$NODE_IDX]}
 		if [ $NEW_NODE = $BASENODE ]; then
-			echo "$VMNAME: no migration"
+			echo " -$VMNAME: no migration" | tee -a $LOGFILE
 		else
-			echo "  $VMNAME: migration on node $NEW_NODE"
+			echo " -$VMNAME: migration on node $NEW_NODE" | tee -a $LOGFILE
 			ApiCall POST "/api2/json/nodes/$BASENODE/qemu/$VMID/migrate?node=$BASENODE&vmid=$VMID&target=${NEW_NODE}"
 #			echo "response=$response"
 #			echo "response=$response" >>debug.log
@@ -1276,7 +1275,7 @@ items=("Show Dashboard" \
 	"Delete VM by tag" \
 	"Start/Stop by tag" \
 	"Storage managment" \
-	"List of users in groups")
+	"List of users and groups")
 
 # option -v: string gets stored in variable
 printf -v CEPH "Storage ceph: hdd=%.2f%% ssd=%.2f%%" $CEPH_HDD $CEPH_SSD
@@ -1296,7 +1295,7 @@ do
 		"${items[2]}") ViewVmByTag;;
 		"${items[3]}") CreateVmSet; FetchData; ShowDashboard;;
 		"${items[4]}") DeleteVmByTag; FetchData; ShowDashboard;;
-		"${items[5]}") StartStop; FetchData;;
+		"${items[5]}") StartStop && FetchData;;
 		"${items[6]}") ViewStorageDetails;;
 		"${items[7]}") ViewGroups;;
 		*) echo "Ooops! Invalid option.";;
