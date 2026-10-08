@@ -1114,15 +1114,25 @@ function checkCEPH()
 		checkVM ${TAB[0]}
 		if [ $? != 0 ]; then
 			((NBD_ORPHAN++));
-			((TOT_SIZE+=${TAB[1]}));
+			((TOT2_SIZE+=${TAB[1]}));
 			echo "$2;${TAB[0]};${TAB[1]};${TAB[2]};${TAB[3]}" >>data_orphaned_disks.csv
 		fi
-
 	done <$1
-	TSIZEG=$(bc <<< $TOT_SIZE/1000000000)
-	echo "Nb of VM disks on $2 storage: $(wc -l < $1), with $NBD_ORPHAN orphaned disks, using $TSIZEG GB"
+	TSIZEG=$(bc <<< $TOT2_SIZE/1000000000)
+#	echo "Nb of VM disks on $2 storage: $(wc -l < $1), with $NBD_ORPHAN orphaned disks, using $TSIZEG GB"
+	NBD_TOT=$(wc -l < $1)
+	((NBD_USED=NBD_TOT-NBD_ORPHAN))
+
+	printf "|   CEPH  |     -    | %4s |  %4d  |  %4d  | %3d (%5d GB) |\n" $2 $NBD_TOT $NBD_USED $NBD_ORPHAN $TSIZEG
 }
 
+#------------------------------------------------------
+# prints details on local storage of each node
+# arg: node name
+function printLocalStorage()
+{
+	printf "|  local  |%10s|\n" $1
+}
 #------------------------------------------------------
 function ViewStorageDetails()
 {
@@ -1140,15 +1150,23 @@ function ViewStorageDetails()
 
 	echo "Processing data..."
 	rm data_orphaned_disks.csv 2>/dev/null
+	echo "| Storage |   Node   | Type | #Total |  #Used |    #Orphaned   |"
+	echo "+---------+----------+------+--------+--------+----------------+"
 	checkCEPH data_storage_SSD.csv SSD
 	checkCEPH data_storage_HDD.csv HDD
 
-	if [ $(wc -l<data_orphaned_disks.csv) = 0 ]; then echo "No orphaned disks!"; return; fi
+	IFS=";"; while read -a TAB
+	do
+		printLocalStorage ${TAB[0]}
+	done <data_nodes.csv
+	echo "+---------+----------+------+--------+--------+----------------+"
+
+#	if [ $(wc -l<data_orphaned_disks.csv) = 0 ]; then echo "No orphaned disks!"; return; fi
 
 	t=(HDD SSD)
 	ANSWER=$(zenity --list --height=300 --text="Delete orphaned disk?" --column="Disk type" ${t[@]})
 	if [ $? != 0 ]; then
-		echo "Interruption"; return
+		echo "Cancel"; return
 	fi
 
 	COUNT=$(wc -l <data_storage_HDD.csv)
@@ -1160,10 +1178,10 @@ function ViewStorageDetails()
 		CEPH_NAME=$CEPH_SSD_NAME
 	fi
 
-	echo "COUNT=$COUNT DFILE=$DFILE CEPH_NAME=$CEPH_NAME"
+#	echo "COUNT=$COUNT DFILE=$DFILE CEPH_NAME=$CEPH_NAME"
 	DOIT=$(zenity --question --text "Ok to delete $COUNT orphaned disks on $ANSWER storage?")
 	if [ $? != 0 ]; then
-		echo "Interruption"; return
+		echo "Cancel"; return
 	fi
 
 	IFS=";"; while read -a TAB
