@@ -849,7 +849,7 @@ function DeleteVmByTag()
 	TAGDEL=$(zenity --list --height=300 \
 		--text="What machines having tag below do you want to erase?" --column="tags" ${TAGARR[@]})
 	if [ $? != 0 ]; then
-		echo "Interruption"; exit 1
+		echo "Cancel"; return 1
 	fi
 
 # count VM only (not templates, as these will not be deleted)
@@ -863,7 +863,7 @@ function DeleteVmByTag()
 	zenity --question --text \
 		"Ok to  erase ${COUNT} VMs associated with tag $TAGDEL?"
 	if [ $? != 0 ]; then
-		echo "Interruption"; exit 1
+		echo "Cancel"; return 1
 	fi
 
 
@@ -947,13 +947,15 @@ function MoveVmDiskByTag()
 }
 
 #================================================================
-# args: $1 disk (HDD/SSD), $2 clone type (FC/LC), $3 base VM ID, in case of Linked Clone
+# args: $1 disk (HDD/SSD), $2 clone type (FC/LC), $3 base VM ID, in case of Linked Clone, $4 VM Id
 function PrintDiskCloneType()
 {
 	CT=$2
-	printf "  %3s |  %2s  |" $1 $CT
+	NBVOL=$(grep "^$4;" data_storage_ceph_$1.csv | wc -l)
+	printf "  %3s  | %2d  |  %2s  |" $1 $NBVOL $CT
 	if [ "$1" == "HDD" ]; then ((NBHDD++)); fi
 	if [ "$1" == "SSD" ]; then ((NBSSD++)); fi
+
 
 # print disk VM Id for linked clone
 		if [ "$CT" == "FC" ]; then
@@ -965,6 +967,7 @@ function PrintDiskCloneType()
 				printf "/%-9s" ${TAB2[0]}
 			done < data/vmid/id_$3
 		fi
+#echo "SEARCH $4 in data_storage_ceph_$1.csv">$LOGFILE
 		echo " |"
 }
 
@@ -984,8 +987,8 @@ function ViewVmByTag()
 
 	if ! [ "$DEBUG" = "Y" ]; then clear; fi
 	echo -e "\n-List of $(wc -l<data_tag_$VTAG.csv) machines having tag '$VTAG':"
-	printf "| VM/T | Stat |      Node     |       Name      |    VMId     |        Tags       | Disk | Type |      LC Disk      |\n";
-	printf "|------+------+---------------+-----------------+-------------+-------------------+------+------+-------------------|\n"
+	printf "| VM/T | Stat |      Node     |       Name      |    VMId     |        Tags       | Stor. | #Vol |Type |      LC Disk      |\n";
+	printf "|------+------+---------------+-----------------+-------------+-------------------+-------+------+-----+-------------------|\n"
 
 	IFS=";"; while read -a TAB
 	do
@@ -1005,13 +1008,12 @@ function ViewVmByTag()
 			fi
 		fi
 		printf " %-13s | %-15s | %11d | %17s |" ${TAB[0]} ${TAB[2]} ${TAB[1]} ${TAB[4]}
-		PrintDiskCloneType ${TAB[6]} ${TAB[7]} ${TAB[8]}
+		PrintDiskCloneType ${TAB[6]} ${TAB[7]} ${TAB[8]} ${TAB[1]}
 
 	done <data_tag_$VTAG.csv
-	printf "|------+------+---------------+-----------------+-------------+-------------------+------+------+-------------------|\n"
+	printf "|------+------+---------------+-----------------+-------------+-------------------+-------+------+-----+-------------------|\n"
 	echo "Summary: $NBT templates and $NBVM VM, with $NBON running. Storage: $NBHDD/HDD, $NBSSD/SSD"
 }
-
 
 #================================================================
 # Show list of users in a given group
@@ -1052,7 +1054,6 @@ function ViewGroups()
 	printf "|----------------+------------------------------------------|\n"
 }
 
-
 #================================================================
 # Show list of VM on a given node
 function ViewVmByNode()
@@ -1064,8 +1065,8 @@ function ViewVmByNode()
 
 	if ! [ "$DEBUG" = "N" ]; then clear; fi
 	echo -e "\n-List of $(wc -l<data_node_$VNODE.csv) machines on node '$VNODE': (FC:Full Clone, LC: Linked Clone)"
-	printf "| VM/T |    |        Name      |    VMId    |       Tags        | Disk | Type |      LC Disk      |\n";
-	printf "|------+----+------------------+------------+-------------------+------+------|-------------------|\n"
+	printf "| VM/T |    |        Name      |    VMId    |       Tags        | Stor. | #Vol |Type |      LC Disk      |\n";
+	printf "|------+----+------------------+------------+-------------------+-------+------+-----+-------------------|\n"
 	NBON=0
 	NBSSD=0
 	NBHDD=0
@@ -1086,9 +1087,9 @@ function ViewVmByNode()
 		TAGS=${TAB[2]}
 		if [ ${#TAB[2]} = 0 ]; then TAGS="(no-tags)";fi
 		printf " | %-16s | %10d | %17s |" ${TAB[1]} ${TAB[0]} $TAGS
-		PrintDiskCloneType ${TAB[5]} ${TAB[6]} ${TAB[7]}
+		PrintDiskCloneType ${TAB[5]} ${TAB[6]} ${TAB[7]} ${TAB[0]}
 	done <data_node_$VNODE.csv
-	printf "|------+----+------------------+------------+-------------------+------+------|-------------------|\n"
+	printf "|------+----+------------------+------------+-------------------+-------+------+-----+-------------------|\n"
 
 	NBT=0
 	if [ -f data_template_$VNODE.csv ]; then
@@ -1117,7 +1118,6 @@ function CheckVM()
 # Fetch all disks on CEPH storage (either SSD or HDD)
 # arg1: SSD or HDD
 # arg2: name of SSD/HDD storage for proxmox
-
 function FetchCephStorage()
 {
 	ApiCall GET "/api2/json/nodes/$APINODE/storage/$2/content"
@@ -1129,7 +1129,7 @@ function FetchCephStorage()
 		((TOT_SIZE+=${TAB[1]}))
 		CheckVM ${TAB[0]}
 		if [ $? != 0 ]; then
-			echo "$2;${TAB[0]};${TAB[1]};${TAB[2]};${TAB[3]}" >>data_orphaned_disks.csv
+			echo "$1;${TAB[0]};${TAB[1]};${TAB[2]};${TAB[3]}" >>data_orphaned_disks.csv
 		fi
 	done <data_storage_ceph_$1.csv
 }
@@ -1231,34 +1231,38 @@ function ViewStorageDetails()
 #	if [ $(wc -l<data_orphaned_disks.csv) = 0 ]; then echo "No orphaned disks!"; return; fi
 
 	t=(HDD SSD)
-	ANSWER=$(zenity --list --height=300 --text="Delete orphaned disk?" --column="Disk type" ${t[@]})
+	DTYPE=$(zenity --list --height=300 --text="Delete orphaned disk?" --column="Disk type" ${t[@]})
 	if [ $? != 0 ]; then
 		echo "Cancel"; return
 	fi
-	echo "ANSWER=$ANSWER"
-	DFILE=data_storage_ceph_HDD.csv
+	echo "DTYPE=$DTYPE"
 	CEPH_NAME=$CEPH_HDD_NAME
-	if [ $ANSWER = SSD ]; then
-		DFILE=data_storage_ceph_SSD.csv
+	if [ $DTYPE = SSD ]; then
 		CEPH_NAME=$CEPH_SSD_NAME
 	fi
-	COUNT=$(wc -l <$DFILE);
 
-#	echo "COUNT=$COUNT DFILE=$DFILE CEPH_NAME=$CEPH_NAME"
-	DOIT=$(zenity --question --text "Ok to delete $COUNT orphaned disks on $ANSWER storage?")
+	COUNT=0
+	IFS=";"; while read -a TAB
+	do
+		if [ ${TAB[0]} = $DTYPE ]; then ((COUNT++)); fi
+	done <data_orphaned_disks.csv
+
+	if [ $COUNT = 0 ]; then echo "Nothing to delete!"; return 1; fi
+
+	DOIT=$(zenity --question --text "Ok to delete $COUNT orphaned disks on $DTYPE storage?")
 	if [ $? != 0 ]; then
-		echo "Cancel"; return
+		echo "Cancel"; return 1
 	fi
 
 	IFS=";"; while read -a TAB
 	do
-		if [ ${TAB[0]} = $ANSWER ]; then
+		if [ ${TAB[0]} = $DTYPE ]; then
 			echo " -Delete volume ${TAB[4]} (${TAB[3]})" | tee -a $LOGFILE
-			ApiCall DELETE "/api2/json/nodes/$APINODE/storage/$CEPH_NAME/content/${TAB[3]}"
+#			ApiCall DELETE "/api2/json/nodes/$APINODE/storage/$CEPH_NAME/content/${TAB[3]}"
 		fi
-	done <$data_orphaned_disks.csv
+	done <data_orphaned_disks.csv
 
-	echo "done"
+	read -p "done, press a key"
 }
 
 #================================================================
@@ -1381,10 +1385,10 @@ do
 		"${items[0]}") ShowDashboard;;
 		"${items[1]}") ViewVmByNode;;
 		"${items[2]}") ViewVmByTag;;
-		"${items[3]}") CreateVmSet; FetchData; ShowDashboard;;
-		"${items[4]}") DeleteVmByTag; FetchData; ShowDashboard;;
+		"${items[3]}") CreateVmSet && FetchData; ShowDashboard;;
+		"${items[4]}") DeleteVmByTag && FetchData; ShowDashboard;;
 		"${items[5]}") StartStop && FetchData;;
-		"${items[6]}") ViewStorageDetails;;
+		"${items[6]}") ViewStorageDetails && ShowDashboard;;
 		"${items[7]}") ViewGroups;;
 		*) echo "Ooops! Invalid option.";;
 	esac
