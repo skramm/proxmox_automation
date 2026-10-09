@@ -1102,28 +1102,36 @@ function checkVM()
 }
 
 #------------------------------------------------------
+# Fetch all disks on CEPH storage (either SSD or HDD) and show details
 # arg1: csv filename holding either HDD or SSD disk data
 # arg2: SSD or HDD
-function checkCEPH()
+# arg3: name of SSD/HDD storage for proxmox
+function ShowCephDetails()
 {
+	ApiCall GET "/api2/json/nodes/$APINODE/storage/$3/content"
+	jq -r '.data[]' <<< "$response" >/tmp/proxmox/storage_$2.json
+	jq -r '(.vmid|tostring) + ";" + (.size|tostring) + ";" + (.parent//"0") + ";" + .name' </tmp/proxmox/storage_$2.json >data_storage_$2.csv
+
 	NBD_ORPHAN=0
 	TOT_SIZE=0
+	TOT_SIZE_OR=0
 	IFS=";"; while read -a TAB
 	do
-#		echo "Checking machine ${TAB[0]} size=${TAB[1]} s_MB = $(bc <<< ${TAB[1]}/1000000) TOT_SIZE=$TOT_SIZE"
+		((TOT_SIZE+=${TAB[1]}))
 		checkVM ${TAB[0]}
 		if [ $? != 0 ]; then
-			((NBD_ORPHAN++));
-			((TOT2_SIZE+=${TAB[1]}));
+			((NBD_ORPHAN++))
+			((TOT_SIZE_OR+=${TAB[1]}))
 			echo "$2;${TAB[0]};${TAB[1]};${TAB[2]};${TAB[3]}" >>data_orphaned_disks.csv
 		fi
 	done <$1
-	TSIZEG=$(bc <<< $TOT2_SIZE/1000000000)
-#	echo "Nb of VM disks on $2 storage: $(wc -l < $1), with $NBD_ORPHAN orphaned disks, using $TSIZEG GB"
+	TSIZEG_OR=$(bc <<< $TOT_SIZE_OR/1000000000)
+	TSIZEG=$(bc <<< $TOT_SIZE/1000000000)
+
 	NBD_TOT=$(wc -l < $1)
 	((NBD_USED=NBD_TOT-NBD_ORPHAN))
 
-	printf "|   CEPH  |     -    | %4s |  %4d  |  %4d  | %3d (%5d GB) |\n" $2 $NBD_TOT $NBD_USED $NBD_ORPHAN $TSIZEG
+	printf "|   CEPH  |      -    | %4s | %3d (%5d GB) |  %4d  | %3d (%5d GB) |\n" $2 $NBD_TOT $TSIZEG $NBD_USED $NBD_ORPHAN $TSIZEG_OR
 }
 
 #------------------------------------------------------
@@ -1131,35 +1139,46 @@ function checkCEPH()
 # arg: node name
 function printLocalStorage()
 {
-	printf "|  local  |%10s|\n" $1
+	NODE=$1
+	ApiCall GET "/api2/json/nodes/$NODE/storage/local/content"
+	jq -r '.data[]' <<< "$response" >/tmp/proxmox/storage_local_$NODE.json
+	jq -r '.format + ";" + (.size|tostring) + ";" + .volid' </tmp/proxmox/storage_local_$NODE.json >data_storage_local_$NODE.csv
+
+	TOTSIZE=0
+	IFS=";"; while read -a TAB
+	do
+		((TOTSIZE+=${TAB[1]}))
+	done <data_storage_local_$NODE.csv
+
+	NBLOC=$(wc -l <data_storage_local_$NODE.csv)
+	TSIZEG=$(bc <<< $TOTSIZE/1000000000)
+	printf "|  local  |%10s |   -  | %3d (%5d GB) |    -   |        -       |\n" $NODE $NBLOC $TSIZEG
 }
+
 #------------------------------------------------------
+# Generate and view detailed storage data
+# columns: related VMID;size;parent disk or 0 if 'null';disk name
+#
 function ViewStorageDetails()
 {
-	if [ "$DEBUG" = "Y" ]; then echo "FUNCTION $FUNCNAME" >>debug.log ; fi
+	if [ "$DEBUG" = "Y" ]; then echo "FUNCTION $FUNCNAME" >>debug.log; fi
 
-	echo "Gathering detailed CEPH storage data..."
-# CEPH
-	ApiCall GET "/api2/json/nodes/$APINODE/storage/$CEPH_SSD_NAME/content"
-	jq -r '.data[]' <<< "$response" >/tmp/proxmox/storage_SSD.json
-	jq -r '(.vmid|tostring) + ";" + (.size|tostring) + ";" + (.parent//"0") + ";" + .name' </tmp/proxmox/storage_SSD.json >data_storage_SSD.csv
+	echo "-Gathering detailed storage data..."
 
-	ApiCall GET "/api2/json/nodes/$APINODE/storage/$CEPH_HDD_NAME/content"
-	jq -r '.data[]' <<< "$response" >/tmp/proxmox/storage_HDD.json
-	jq -r '(.vmid|tostring) + ";" + (.size|tostring) + ";" + (.parent//"0") + ";" + .name' </tmp/proxmox/storage_HDD.json >data_storage_HDD.csv
-
-	echo "Processing data..."
+# CEPH storage
 	rm data_orphaned_disks.csv 2>/dev/null
-	echo "| Storage |   Node   | Type | #Total |  #Used |    #Orphaned   |"
-	echo "+---------+----------+------+--------+--------+----------------+"
-	checkCEPH data_storage_SSD.csv SSD
-	checkCEPH data_storage_HDD.csv HDD
+	echo "| Storage |    Node   | Type |      #Total    |  #Used |    #Orphaned   |"
+	echo "+---------+-----------+------+----------------+--------+----------------+"
+	ShowCephDetails data_storage_SSD.csv SSD $CEPH_SSD_NAME
+	ShowCephDetails data_storage_HDD.csv HDD $CEPH_HDD_NAME
 
+# local storage (on each node)
 	IFS=";"; while read -a TAB
 	do
 		printLocalStorage ${TAB[0]}
 	done <data_nodes.csv
-	echo "+---------+----------+------+--------+--------+----------------+"
+
+	echo "+---------+-----------+------+----------------+--------+----------------+"
 
 #	if [ $(wc -l<data_orphaned_disks.csv) = 0 ]; then echo "No orphaned disks!"; return; fi
 
@@ -1168,7 +1187,7 @@ function ViewStorageDetails()
 	if [ $? != 0 ]; then
 		echo "Cancel"; return
 	fi
-
+	echo "ANSWER=$ANSWER"
 	COUNT=$(wc -l <data_storage_HDD.csv)
 	DFILE=data_storage_HDD.csv
 	CEPH_NAME=$CEPH_HDD_NAME
@@ -1188,7 +1207,7 @@ function ViewStorageDetails()
 	do
 		if [ ${TAB[0]} = $ANSWER ]; then
 			echo " -Delete volume ${TAB[4]} (${TAB[3]})" | tee -a $LOGFILE
-#		ApiCall DELETE "/api2/json/nodes/$APINODE/storage/$CEPH_NAME/content/${TAB[3]}"
+			ApiCall DELETE "/api2/json/nodes/$APINODE/storage/$CEPH_NAME/content/${TAB[3]}"
 		fi
 	done <$data_orphaned_disks.csv
 
@@ -1273,6 +1292,10 @@ declare -a TAGARR
 # create an array holding the nodes names
 unset NODEARR
 declare -a NODEARR
+
+#TMP
+#ViewStorageDetails
+#exit 1
 
 FetchData
 ShowDashboard
