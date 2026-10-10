@@ -755,7 +755,6 @@ fi
 # --------------------------------
 	if [ "$DEBUG" = "Y" ]; then echo "FUNCTION $FUNCNAME, start cloning..." >>debug.log ; fi
 
-
 NUMA=1
 NODE_IDX=0
 
@@ -789,11 +788,11 @@ do
 		--data-urlencode description="$DESC")
 	err=$?
 	CheckError
-	echo "response=$response" | tee -a $LOGFILE
+#	echo "response=$response" | tee -a $LOGFILE
 
 	echo " -Adding tags" | tee -a $LOGFILE
 	ApiCall POST "/api2/json/nodes/$BASENODE/qemu/$VMID/config?node=$BASENODE&vmid=$VMID&tags=$TAGS"
-	echo "response=$response"
+#	echo "response=$response"
 
 	echo " -configuration permissions (roles)" | tee -a $LOGFILE
 # ref: https://pve.proxmox.com/pve-docs/api-viewer/#/access/acl
@@ -807,7 +806,7 @@ do
 		"https://${APINODE}.${DOMAIN}:${PORT}/api2/json/access/acl")
 	err=$?
 	CheckError
-	echo "response=$response" | tee -a $LOGFILE
+#	echo "response=$response" | tee -a $LOGFILE
 
 # Migration of the created VM on all the nodes of the cluster
 	if [ "$DO_MIGRATE" = "Y" ]; then
@@ -830,8 +829,7 @@ do
 	((NUMA++))
 done <data_group_${GROUPSEL}.csv
 
-echo "Done !, hit a key"
-read
+read -p "Done, hit a key"
 }
 
 #================================================================
@@ -947,12 +945,16 @@ function MoveVmDiskByTag()
 }
 
 #================================================================
-# args: $1 disk (HDD/SSD), $2 clone type (FC/LC), $3 base VM ID, in case of Linked Clone, $4 VM Id
+# args: $1 disk (HDD/SSD), $2 clone type (FC/LC), $3 base VM ID (in case of Linked Clone), $4 VM Id
 function PrintDiskCloneType()
 {
 	CT=$2
-	NBVOL=$(grep "^$4;" data_storage_ceph_$1.csv | wc -l)
-	printf "  %3s  | %2d  |  %2s  |" $1 $NBVOL $CT
+	if [ $1 = XXX ]; then
+		NBVOL=???
+	else
+		NBVOL=$(grep "^$4;" data_storage_ceph_$1.csv | wc -l)
+	fi
+	printf "  %3s  |  %2d  | %2s  |" $1 $NBVOL $CT
 	if [ "$1" == "HDD" ]; then ((NBHDD++)); fi
 	if [ "$1" == "SSD" ]; then ((NBSSD++)); fi
 
@@ -984,7 +986,7 @@ function ViewVmByTag()
 	NBON=0
 	NBHDD=0
 	NBSSD=0
-
+	TOT_VOL=0
 	if ! [ "$DEBUG" = "Y" ]; then clear; fi
 	echo -e "\n-List of $(wc -l<data_tag_$VTAG.csv) machines having tag '$VTAG':"
 	printf "| VM/T | Stat |      Node     |       Name      |    VMId     |        Tags       | Stor. | #Vol |Type |      LC Disk      |\n";
@@ -1009,10 +1011,10 @@ function ViewVmByTag()
 		fi
 		printf " %-13s | %-15s | %11d | %17s |" ${TAB[0]} ${TAB[2]} ${TAB[1]} ${TAB[4]}
 		PrintDiskCloneType ${TAB[6]} ${TAB[7]} ${TAB[8]} ${TAB[1]}
-
+		((TOT_VOL+=NBVOL))
 	done <data_tag_$VTAG.csv
 	printf "|------+------+---------------+-----------------+-------------+-------------------+-------+------+-----+-------------------|\n"
-	echo "Summary: $NBT templates and $NBVM VM, with $NBON running. Storage: $NBHDD/HDD, $NBSSD/SSD"
+	echo "Summary: $NBT templates and $NBVM VM, with $NBON running. Storage: $NBHDD/HDD, $NBSSD/SSD, on $TOT_VOL volumes"
 }
 
 #================================================================
@@ -1070,6 +1072,7 @@ function ViewVmByNode()
 	NBON=0
 	NBSSD=0
 	NBHDD=0
+	TOT_VOL=0
 	IFS=";"; while read -a TAB
 	do
 		if [ ${TAB[3]} == 1 ]; then
@@ -1088,6 +1091,7 @@ function ViewVmByNode()
 		if [ ${#TAB[2]} = 0 ]; then TAGS="(no-tags)";fi
 		printf " | %-16s | %10d | %17s |" ${TAB[1]} ${TAB[0]} $TAGS
 		PrintDiskCloneType ${TAB[5]} ${TAB[6]} ${TAB[7]} ${TAB[0]}
+		((TOT_VOL+=NBVOL))
 	done <data_node_$VNODE.csv
 	printf "|------+----+------------------+------------+-------------------+-------+------+-----+-------------------|\n"
 
@@ -1098,7 +1102,7 @@ function ViewVmByNode()
 
 	NBTOT=$(wc -l <data_node_$VNODE.csv)
 	((NBVM=NBTOT-NBT))
-	echo "Summary: $NBT templates and $NBVM VM, with $NBON running. Storage: $NBSSD/SSD,  $NBHDD/HDD"
+	echo "Summary: $NBT templates and $NBVM VM, with $NBON running. Storage: $NBSSD/SSD,  $NBHDD/HDD, on $TOT_VOL volumes"
 }
 
 #================================================================
@@ -1205,7 +1209,7 @@ function ViewLocalStorage()
 
 	NBLOC=$(wc -l <data_storage_local_$1.csv)
 	TSIZEG=$(bc <<< $TOTSIZE/1000000000)
-	printf "|  local  |%10s |   -  | %3d (%5d GB) |    -   |        -       |\n" $NODE $NBLOC $TSIZEG
+	printf "|  local  |%10s |   -  | %3d (%5d GB) |    -   |        -       |\n" $1 $NBLOC $TSIZEG
 }
 
 #------------------------------------------------------
@@ -1216,7 +1220,7 @@ function ViewStorageDetails()
 {
 	if [ "$DEBUG" = "Y" ]; then echo "FUNCTION $FUNCNAME" >>debug.log; fi
 
-	echo "| Storage |    Node   | Type |      #Total    |  #Used |    #Orphaned   |"
+	echo -e "\n| Storage |    Node   | Type |      #Total    |  #Used |    #Orphaned   |"
 	echo "+---------+-----------+------+----------------+--------+----------------+"
 	ViewCephDetails data_storage_ceph_SSD.csv SSD
 	ViewCephDetails data_storage_ceph_HDD.csv HDD
