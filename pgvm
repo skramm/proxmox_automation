@@ -41,7 +41,7 @@ TOKEN_FILE=$1
 # Check that file holding credentials is there
 if ! [ -f $TOKEN_FILE ];
 then
-	echo "Erreur, fichier '$TOKEN_FILE' introuvable!"
+	echo "Error, file '$TOKEN_FILE' unreachable!"
 	exit 1
 fi
 source $TOKEN_FILE
@@ -94,12 +94,8 @@ function ApiCall()
 		exit 1
 	fi
 
-#	if [ "$DEBUG" = "Y" ]; then
-#		echo "DEBUG: ApiCall $1 $2"
-#		echo "DEBUG: response=$response"
-#	fi
+	echo -e "APICall method:$1, endpoint:$2\n =>response=$response" >>$LOGFILE
 }
-
 
 #================================================================
 # Fetch data of a given node ($1), called by FetchData()
@@ -151,7 +147,6 @@ function ProcessNode()
 			if [ "$DEBUG" = "Y" ]; then echo "D1=$D1" >>debug.log; fi
 			OLDIFS="$IFS"; IFS=":"; while read -a ARR3
 			do
-#echo "ARR3[0]=${ARR3[0]}" >>debug.log
 				echo -n "${VM[0]};${VM[1]};${VM[2]};${VM[3]};${VM[4]};" >>data_node_$1.csv
 				if [ ${ARR3[0]} = $CEPH_HDD_NAME ]; then
 					echo -n "HDD" >>data_node_$1.csv
@@ -207,7 +202,6 @@ function ProcessNode()
 		fi
 	done < data_node_$1.csv
 }
-
 
 #================================================================
 # Finds the ratio of local storage used, called for every node
@@ -266,7 +260,7 @@ function FetchData()
 
 # Fetch list of nodes
 	ApiCall GET "/api2/json/nodes"
-	jq  -r '.data[] | .node' <<<"$response" >/tmp/proxmox/data_nodes.csv 2>>$CURLLOG
+	jq  -r '.data[] | .node' <<<"$response" >/tmp/proxmox/data_nodes.csv
 	sort /tmp/proxmox/data_nodes.csv >/tmp/proxmox/data_nodes2.csv
 
 # get CPU load of each node
@@ -446,7 +440,9 @@ function ShowTemplates()
 }
 
 #================================================================
-function GetType()
+# Count the number of VM and templates for a given tag ($1)
+# Set values in TAG_NB_VM and TAG_NB_T
+function CountTypeByTag()
 {
 	TAG_NB_VM=0
 	TAG_NB_T=0
@@ -458,7 +454,6 @@ function GetType()
 			((TAG_NB_T++))
 		fi
 	done <data_tag_$1.csv
-
 }
 
 #================================================================
@@ -470,7 +465,7 @@ function ShowTags()
 	printf "\n|   %2d Tags  | #VM+T | #VM |  #T |\n|------------+-------+-----+-----|\n" $(wc -l <data_tags.csv)
 	while read TAG
 	do
-		GetType $TAG
+		CountTypeByTag $TAG
 		if [ "$TAG" = " " ]; then
 			printf "| (sans tag) "
 		else
@@ -527,7 +522,6 @@ function CheckError()
 	if ! [ $err = 0 ]; then
 		echo "Curl error: $err, server response=-$response-"; exit 1
 	fi
-	echo "$response" >>$CURLLOG
 }
 
 
@@ -607,7 +601,7 @@ function CreateVmSet()
 DONE=NO
 while [ $DONE = NO ]
 do
-	BASENODE=$(zenity --list --text="Select node on which is the\ntemplate" --column="Nodes" ${NODEARR[@]})
+	BASENODE=$(zenity --list --text="Select node on which the\ntemplate is" --column="Nodes" ${NODEARR[@]})
 	if [ $? != 0 ]; then
 		echo "Cancel"; return 1
 	fi
@@ -631,8 +625,6 @@ do
 	x=${ARR[0]}
 	TEMPLATES+=($x)
 done < data_template_$BASENODE.csv
-
-#echo "t=${TEMPLATES[@]}"
 
 TEMPLATE=$(zenity --list --text="Which template?" --column="Templates" ${TEMPLATES[@]})
 if [ $? != 0 ]; then
@@ -758,6 +750,8 @@ fi
 NUMA=1
 NODE_IDX=0
 
+echo "Start: create $NB VM\n- on node $BASENODE,\n- named ${VMNAMES},\n- based on template $TEMPLATE,\n- with tags '$TAGS'?'" >>$LOGFILE
+
 IFS=";"; while read -a ARR
 do
 	IDU1=${ARR[0]}
@@ -788,11 +782,10 @@ do
 		--data-urlencode description="$DESC")
 	err=$?
 	CheckError
-#	echo "response=$response" | tee -a $LOGFILE
+	echo "response=$response" >>$LOGFILE
 
 	echo " -Adding tags" | tee -a $LOGFILE
 	ApiCall POST "/api2/json/nodes/$BASENODE/qemu/$VMID/config?node=$BASENODE&vmid=$VMID&tags=$TAGS"
-#	echo "response=$response"
 
 	echo " -configuration permissions (roles)" | tee -a $LOGFILE
 # ref: https://pve.proxmox.com/pve-docs/api-viewer/#/access/acl
@@ -806,7 +799,7 @@ do
 		"https://${APINODE}.${DOMAIN}:${PORT}/api2/json/access/acl")
 	err=$?
 	CheckError
-#	echo "response=$response" | tee -a $LOGFILE
+echo "response=$response" >>$LOGFILE
 
 # Migration of the created VM on all the nodes of the cluster
 	if [ "$DO_MIGRATE" = "Y" ]; then
@@ -821,8 +814,6 @@ do
 		else
 			echo " -$VMNAME: migration on node $NEW_NODE" | tee -a $LOGFILE
 			ApiCall POST "/api2/json/nodes/$BASENODE/qemu/$VMID/migrate?node=$BASENODE&vmid=$VMID&target=${NEW_NODE}"
-#			echo "response=$response"
-#			echo "response=$response" >>debug.log
 		fi
 	fi
 
@@ -851,7 +842,6 @@ function DeleteVmByTag()
 	fi
 
 # count VM only (not templates, as these will not be deleted)
-#echo "TAGDEL=$TAGDEL"
 	COUNT=0
 	IFS=";"; while read -a ARR
 	do
@@ -869,30 +859,30 @@ function DeleteVmByTag()
 # Delete VMs
 # TODO: pas plus simple de lire dans le fichier tags_XXXX.csv ???
 
-COMPT=0
-IFS=";"; while read -a TAB
-do
-	if ! [ "${TAB[3]}" = "" ]; then
-		IFS=","; read -r -a TAGS <<< "${TAB[3]}"; IFS=";"
-		for ((i=0; i<${#TAGS[@]}; i++))
-		do
-			tag=${TAGS[$i]}
-#				echo "node ${TAB[0]}: machine ${TAB[2]}, tag=$tag"
-			if [ $tag = $TAGDEL ]; then
-				if [ "${TAB[4]}" = "1" ]; then
-					echo "node ${TAB[0]}: machine ${TAB[2]}, id=${TAB[1]} is a template, no removal" | tee -a $LOGFILE
-				else
-					echo "node ${TAB[0]}: erasing VM ${TAB[2]}, id=${TAB[1]}" | tee -a $LOGFILE
-					ApiCall DELETE "/api2/json/nodes/${TAB[0]}/qemu/${TAB[1]}?node=${TAB[0]}&vmid=${TAB[1]}"
-					((COMPT++))
+	echo "Erasing $COUNT VMs: start" >>$LOGFILE
+	COMPT=0
+	IFS=";"; while read -a TAB
+	do
+		if ! [ "${TAB[3]}" = "" ]; then
+			IFS=","; read -r -a TAGS <<< "${TAB[3]}"; IFS=";"
+			for ((i=0; i<${#TAGS[@]}; i++))
+			do
+				tag=${TAGS[$i]}
+	#				echo "node ${TAB[0]}: machine ${TAB[2]}, tag=$tag"
+				if [ $tag = $TAGDEL ]; then
+					if [ "${TAB[4]}" = "1" ]; then
+						echo "node ${TAB[0]}: machine ${TAB[2]}, id=${TAB[1]} is a template, no removal" | tee -a $LOGFILE
+					else
+						echo "node ${TAB[0]}: erasing VM ${TAB[2]}, id=${TAB[1]}" | tee -a $LOGFILE
+						ApiCall DELETE "/api2/json/nodes/${TAB[0]}/qemu/${TAB[1]}?node=${TAB[0]}&vmid=${TAB[1]}"
+						((COMPT++))
+					fi
 				fi
-			fi
-		done
-	fi
-done <data_node_ALL.csv
+			done
+		fi
+	done <data_node_ALL.csv
 
-echo "-$COMPT VM deleted, press a key"
-read
+	read -p "-$COMPT VMs deleted, press a key "
 }
 
 #================================================================
@@ -948,19 +938,21 @@ function MoveVmDiskByTag()
 # args: $1 disk (HDD/SSD), $2 clone type (FC/LC), $3 base VM ID (in case of Linked Clone), $4 VM Id
 function PrintDiskCloneType()
 {
-	CT=$2
+# This counts the number of volumes for each VM.
+# In some situations, we are not able to determine the type of disk (SSD vs HDD).
+# In that case, the type is XXX in the csv data file, thus the test below.
 	if [ $1 = XXX ]; then
-		NBVOL=???
+		NBVOL="???"
 	else
 		NBVOL=$(grep "^$4;" data_storage_ceph_$1.csv | wc -l)
 	fi
-	printf "  %3s  |  %2d  | %2s  |" $1 $NBVOL $CT
+	printf "  %3s  |  %2d  | %2s  |" $1 $NBVOL $2
 	if [ "$1" == "HDD" ]; then ((NBHDD++)); fi
 	if [ "$1" == "SSD" ]; then ((NBSSD++)); fi
 
 
 # print disk VM Id for linked clone
-		if [ "$CT" == "FC" ]; then
+		if [ "$2" == "FC" ]; then
 			printf "        -         "
 		else
 			printf "  %6d" $3
@@ -1262,7 +1254,7 @@ function ViewStorageDetails()
 	do
 		if [ ${TAB[0]} = $DTYPE ]; then
 			echo " -Delete volume ${TAB[4]} (${TAB[3]})" | tee -a $LOGFILE
-#			ApiCall DELETE "/api2/json/nodes/$APINODE/storage/$CEPH_NAME/content/${TAB[3]}"
+			ApiCall DELETE "/api2/json/nodes/$APINODE/storage/$CEPH_NAME/content/${TAB[3]}"
 		fi
 	done <data_orphaned_disks.csv
 
@@ -1308,8 +1300,7 @@ VarCheck "$APINODE" APINODE
 VarCheck "$DOMAIN" DOMAIN
 if [ "$PORT" = "" ]; then PORT=8006; fi
 
-TODAY=$(date '+%Y%m%d_%H%M%S')
-CURLLOG=/tmp/proxmox/curl_$TODAY.log
+echo "pgvm logfile, generated on $TODAY" >$LOGFILE
 
 # All temporary files are stored over there
 mkdir -p /tmp/proxmox
@@ -1319,7 +1310,7 @@ mkdir -p /tmp/proxmox
 echo -n "-Test of Proxmox API response: "
 ping -c 1 ${APINODE}.${DOMAIN} 1>/dev/null 2>/dev/null
 if ! [ $? = 0 ]; then
-	echo "Error: DNS failure on ${APINODE}.${DOMAIN}"
+	echo "Error: DNS failure on ${APINODE}.${DOMAIN}, PORT=$PORT" | tee -a $LOGFILE
 	exit 1
 fi
 echo "ok"
@@ -1328,14 +1319,14 @@ curl --insecure \
 	--connect-timeout 5 \
 	--silent -X GET \
 	-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
-	"https://${APINODE}.${DOMAIN}:${PORT}/api2/json/version" >> $CURLLOG
+	"https://${APINODE}.${DOMAIN}:${PORT}/api2/json/version" >> $LOGFILE
 	if ! [ $? = 0 ];
 	then
-		echo "Error: API not reachable, please check credentials in file '$TOKEN_FILE'"
+		echo "Error: API not reachable, please check credentials in file '$TOKEN_FILE'" | tee -a $LOGFILE
 		exit 1
 	fi
 
-echo "-Connection API: ok"
+echo "-Connection API: ok" | tee -a $LOGFILE
 
 # Associative array used to count tags
 unset TAGAARR
@@ -1399,6 +1390,5 @@ do
 done
 
 if ! [ "$DEBUG" = "Y" ]; then rm /tmp/proxmox/* 2>/dev/null; fi
-echo "fini!"
-
+echo "Bye!"
 
