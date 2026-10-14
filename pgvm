@@ -121,7 +121,7 @@ function ProcessNode()
 	sed -i -e 's/_/;/g' /tmp/proxmox/node_$1.csv
 
 # sort by name
-	sort --key=1 /tmp/proxmox/node_$1.csv >/tmp/proxmox/data_node2_$1.csv
+	sort --key=1 /tmp/proxmox/node_$1.csv >/tmp/proxmox/node2_$1.csv
 
 # Add type and disk config
 # Depending on machine type, the disk will be encode in the API response either as
@@ -176,7 +176,7 @@ function ProcessNode()
 				fi
 			done <<< $D1; IFS="$OLDIFS"
 		done <<<$DISK; IFS=";"
-	done </tmp/proxmox/data_node2_$1.csv
+	done </tmp/proxmox/node2_$1.csv
 
 
 # Add node name on each line of global file, first position
@@ -220,12 +220,12 @@ function GetLocalStorage()
 			STOR_RATIO=${ARRSTO[1]}
 		fi
 		if [ "${ARRSTO[0]}" = "$CEPH_HDD_NAME" ] || [ "${ARRSTO[0]}" = "$CEPH_SSD_NAME" ]; then
-			echo "${ARRSTO[0]};${ARRSTO[1]}" >>/tmp/proxmox/data_storage_ceph.csv
+			echo "${ARRSTO[0]};${ARRSTO[1]}" >>/tmp/proxmox/storage_ceph.csv
 		fi
 	done </tmp/proxmox/storage_$1.csv
 
 # we only need the first 2, the others are redundant
-	head -n 2 /tmp/proxmox/data_storage_ceph.csv >data_storage_ceph.csv
+	head -n 2 /tmp/proxmox/storage_ceph.csv >data_storage_ceph.csv
 }
 
 #================================================================

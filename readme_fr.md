@@ -116,7 +116,7 @@ L'API n'est accessible que via l'une des machines du cluster, il faut donc spéc
 Si ce node tombe, il suffit d'un prendre un autre.
 Mais quel que soit le node choisi pour la connexion, l'ensemble du cluster est manipulable via l'API.
 
-**Lancement***
+**Lancement**
 
 Le lancement du programme sera fait dans un dossier vide, fait en donnant le nom (et chemin éventuel) de ce fichier.
 Ce fichier sera ensuite lu (avec `source`) pour récupérer les informations de connexion et d'identification:
@@ -125,7 +125,7 @@ Ce fichier sera ensuite lu (avec `source`) pour récupérer les informations de 
 $ pgvm chemin/vers/le/fichier
 ```
 
-Ceci va en premier tester la connection à l'API, et affiche un message d'erreur en cas de problème, qu'il faut donc regler.
+Ceci va en premier tester la connection à l'API, et affiche un message d'erreur en cas de problème.
 
 Il est recommandé de démarrer à partir d'un dossier vide parce que l'ensemble des infos extraites de l'API seront placées dans de nombreux fichiers csv qui vont donc remplir ce dossier.
 
