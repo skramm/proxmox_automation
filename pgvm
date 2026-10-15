@@ -90,7 +90,7 @@ function ApiCall()
 	if ! [ $err = 0 ];
 	then
 		echo "Error: API call failure, HTTP method='$1', endpoint='$2'"
-		echo -e " -curl return value: $err\n -API response: $response"
+		echo -e " -curl return value: $err\n -API response: -$response-"
 		exit 1
 	fi
 
@@ -101,7 +101,7 @@ function ApiCall()
 # Fetch data of a given node ($1), called by FetchData()
 function ProcessNode()
 {
-	echo " -Process Node: $1"
+	echo " -Process node: $1"
 	if [ "$DEBUG" = "Y" ]; then echo "FUNCTION $FUNCNAME -$1-" >>debug.log ; fi
 
 	ApiCall GET "/api2/json/nodes/$1/qemu?full=1"
@@ -648,7 +648,7 @@ while [ $DONE = NO ]
 do
 	MOD=$(zenity --entry --text "Enter root VM name (RXXX, SAETTT)")
 	if [ $? != 0 ]; then
-		echo "Cancer"; return 1
+		echo "Cancel"; return 1
 	fi
 	if [ ${#MOD} = 0 ]; then
 		echo "Error, cannot be empty!"
@@ -663,7 +663,6 @@ done
 DONE=NO
 while [ $DONE = NO ]
 do
-
 	TAGS=$(zenity --entry --text "Enter tags, comma separated\nno space in the tags!)")
 	if [ $? != 0 ]; then
 		echo "Cancel"; return 1
@@ -886,7 +885,7 @@ function DeleteVmByTag()
 }
 
 #================================================================
-# Migration du stockage de SSD=>HDD et inversement (WIP!!!)
+# Migrate storage from SSD=>HDD and opposite (WIP!!!)
 # ref: https://pve.proxmox.com/pve-docs/api-viewer/#/nodes/{node}/qemu/{vmid}/move_disk
 function MoveVmDiskByTag()
 {
@@ -894,7 +893,7 @@ function MoveVmDiskByTag()
 
 	VTAG=$(zenity --list --height=300 --text="What tag?" --column="Tags" "${TAGARR[@]}")
 	if [ $? != 0 ]; then
-		echo "Interruption"; exit 1
+		echo "Cancel"; return 1
 	fi
 
 # Affichage du stockage actuel
@@ -930,7 +929,7 @@ function MoveVmDiskByTag()
 			ApiCall POST /api2/json/nodes/$NODE/qemu/$VMID/move_disk?disk=????&node=$NODE&vmid=$VMID&target-disk=$TARGET_NAME
 		done <data_tag_$VTAG.csv
 	else
-		echo "Cancel"
+		echo "Cancel"; return 1
 	fi
 }
 
@@ -950,7 +949,6 @@ function PrintDiskCloneType()
 	if [ "$1" == "HDD" ]; then ((NBHDD++)); fi
 	if [ "$1" == "SSD" ]; then ((NBSSD++)); fi
 
-
 # print disk VM Id for linked clone
 		if [ "$2" == "FC" ]; then
 			printf "        -         "
@@ -961,7 +959,6 @@ function PrintDiskCloneType()
 				printf "/%-9s" ${TAB2[0]}
 			done < data/vmid/id_$3
 		fi
-#echo "SEARCH $4 in data_storage_ceph_$1.csv">$LOGFILE
 		echo " |"
 }
 
@@ -971,7 +968,7 @@ function ViewVmByTag()
 {
 	VTAG=$(zenity --list --height=300 --text="What tag?" --column="Tags" "${TAGARR[@]}")
 	if [ $? != 0 ]; then
-		echo "Interruption"; exit 1
+		echo "Cancel"; return 1
 	fi
 	NBT=0
 	NBVM=0
@@ -1025,7 +1022,7 @@ function ViewGroups()
 
 	GROUP=$(zenity --list --height=300 --text="What group?" --column="Groups" "${GROUPARR[@]}")
 	if [ $? != 0 ]; then
-		echo "Interruption"; exit 1
+		echo "Cancel"; return 1
 	fi
 
 	if [ "$GROUP" = "(No group)" ]; then
@@ -1054,7 +1051,7 @@ function ViewVmByNode()
 {
 	VNODE=$(zenity --list --text="What node ?" --column="Node" "${NODEARR[@]}")
 	if [ $? != 0 ]; then
-		echo "Interruption"; exit 1
+		echo "Cancel"; return 1
 	fi
 
 	if ! [ "$DEBUG" = "N" ]; then clear; fi
@@ -1229,7 +1226,7 @@ function ViewStorageDetails()
 	t=(HDD SSD)
 	DTYPE=$(zenity --list --height=300 --text="Delete orphaned disk?" --column="Disk type" ${t[@]})
 	if [ $? != 0 ]; then
-		echo "Cancel"; return
+		echo "Cancel"; return 1
 	fi
 	echo "DTYPE=$DTYPE"
 	CEPH_NAME=$CEPH_HDD_NAME
@@ -1315,17 +1312,8 @@ if ! [ $? = 0 ]; then
 fi
 echo "ok"
 
-curl --insecure \
-	--connect-timeout 5 \
-	--silent -X GET \
-	-H "Authorization: PVEAPIToken=${PVUSER}@${REALM}!${TOK_NAME}=${TOK_VALUE}" \
-	"https://${APINODE}.${DOMAIN}:${PORT}/api2/json/version" >> $LOGFILE
-	if ! [ $? = 0 ];
-	then
-		echo "Error: API not reachable, please check credentials in file '$TOKEN_FILE'" | tee -a $LOGFILE
-		exit 1
-	fi
 
+ApiCall GET "/api2/json/version"
 echo "-Connection API: ok" | tee -a $LOGFILE
 
 # Associative array used to count tags
