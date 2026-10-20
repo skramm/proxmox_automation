@@ -302,10 +302,6 @@ R:  Je suis plus à l'aise en Bash qu'en Python, c'est la seule raison. Mais à 
 - Q: Est-ce que ceci est utilisable sous Windows avec WSL?  
 R: Aucune idée, mais je suis preneur de retours!
 
-- Q: Pourquoi des affichages en français?  
-R: L'idée initiale était de faciliter l'usage en interne (IUT Rouen/URN), mais à terme j'envisage une internationalisation
-(mais bon, c'est en Bash, donc faut pas trop complexifier non plus...)
-
 - Q: bizarre, le nom, non?  
 R: Oui, j'ai pas trouvé mieux...
 
