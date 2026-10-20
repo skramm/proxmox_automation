@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-VERSION=20261009
+VERSION=20261020
 # name: pgvm ("Proxmox Gestion VM")
 # S. Kramm, URN, 2026
 # https://github.com/skramm/proxmox_automation
@@ -535,12 +535,9 @@ function StartStop()
 	if [ $? != 0 ]; then
 		echo "Cancel"; return 1
 	fi
-#	ACTION=$(zenity --list --text="Start, Stop, or immediate shutdown?" \
-#		--column="Action" "Start" "Shutdown" "Stop (immediate)")
 
 	ACTION=$(zenity --list --text="Select" --multiple --column="c1" --column="Action" --hide-column=1 \
 		A Start B Shutdown C "Stop (Immediate)")
-
 	if [ $? != 0 ]; then
 		echo "Cancel"; return 1
 	fi
@@ -564,7 +561,6 @@ function StartStop()
 			fi
 		fi
 	done <data/tag_$VTAG.csv
-
 	echo "Nb of related VM: $COUNT"
 
 	if [ $COUNT != 0 ]; then
@@ -1382,7 +1378,7 @@ do
 		"${items[2]}") ViewVmByTag;;
 		"${items[3]}") CreateVmSet && FetchData; ShowDashboard;;
 		"${items[4]}") DeleteVmByTag && FetchData; ShowDashboard;;
-		"${items[5]}") StartStop && FetchData;;
+		"${items[5]}") StartStop && FetchData; ShowDashboard;;
 		"${items[6]}") ViewStorageDetails && ShowDashboard;;
 		"${items[7]}") ViewGroups;;
 		*) echo "Ooops! Invalid option.";;
